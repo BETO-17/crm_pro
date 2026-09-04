@@ -1,0 +1,53 @@
+import { useEffect, useRef } from 'react';
+import LandingNavbar from './components/LandingNavbar';
+import HeroSection from './components/HeroSection';
+import DashboardPreview from './components/DashboardPreview';
+import PillarsSection from './components/PillarsSection';
+import ModulesSection from './components/ModulesSection';
+import TestimonialsSection from './components/TestimonialsSection';
+import PricingSection from './components/PricingSection';
+import FooterLanding from './components/FooterLanding';
+import './landing.css';
+
+interface LandingPageProps {
+  onLogin: () => void;
+}
+
+export default function LandingPage({ onLogin }: LandingPageProps) {
+  const observerRef = useRef<IntersectionObserver | null>(null);
+
+  useEffect(() => {
+    observerRef.current = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('visible');
+          }
+        });
+      },
+      { threshold: 0.15, rootMargin: '0px 0px -40px 0px' }
+    );
+
+    const elements = document.querySelectorAll('.landing-animate, .landing-animate-stagger');
+    elements.forEach((el) => observerRef.current?.observe(el));
+
+    return () => {
+      observerRef.current?.disconnect();
+    };
+  }, []);
+
+  return (
+    <div style={{ background: '#fff', minHeight: '100vh' }}>
+      <LandingNavbar onLogin={onLogin} />
+      <main>
+        <HeroSection />
+        <DashboardPreview />
+        <PillarsSection />
+        <ModulesSection />
+        <TestimonialsSection />
+        <PricingSection />
+      </main>
+      <FooterLanding />
+    </div>
+  );
+}
