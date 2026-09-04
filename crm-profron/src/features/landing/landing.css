@@ -1692,3 +1692,461 @@
     font-size: 34px;
   }
 }
+
+/* ============================================
+   LOGIN MODAL
+   ============================================ */
+
+/* Overlay */
+.login-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  padding: 24px;
+  animation: loginOverlayIn 0.3s ease;
+}
+
+@keyframes loginOverlayIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* Card */
+.login-modal-card {
+  position: relative;
+  width: 100%;
+  max-width: 420px;
+  background: #0f1219;
+  border-radius: 20px;
+  padding: 40px 36px 36px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.5),
+              0 0 0 1px rgba(255, 255, 255, 0.04);
+  animation: loginCardIn 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes loginCardIn {
+  from {
+    opacity: 0;
+    transform: translateY(24px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Close button */
+.login-modal-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: none;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s, color 0.2s;
+}
+
+.login-modal-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* Header */
+.login-modal-header {
+  text-align: center;
+  margin-bottom: 28px;
+}
+
+.login-modal-shield {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: rgba(79, 140, 255, 0.12);
+  color: #4f8cff;
+  margin-bottom: 12px;
+}
+
+.login-modal-label {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #4f8cff;
+  margin-bottom: 8px;
+}
+
+.login-modal-title {
+  font-size: 24px;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: -0.5px;
+}
+
+/* Stepper */
+.login-modal-stepper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  margin-bottom: 28px;
+}
+
+.login-step-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  opacity: 0.4;
+  transition: opacity 0.3s;
+}
+
+.login-step-item.active {
+  opacity: 1;
+}
+
+.login-step-number {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.6);
+  transition: background 0.3s, color 0.3s;
+}
+
+.login-step-item.active .login-step-number {
+  background: rgba(79, 140, 255, 0.2);
+  color: #4f8cff;
+}
+
+.login-step-item.completed .login-step-number {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+}
+
+.login-step-text {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.login-step-item.active .login-step-text {
+  color: #ffffff;
+}
+
+.login-step-divider {
+  width: 40px;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.1);
+  margin: 0 16px;
+}
+
+/* Form */
+.login-modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.login-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.login-field-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.login-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.login-input-icon {
+  position: absolute;
+  left: 14px;
+  color: rgba(255, 255, 255, 0.25);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.login-modal-input {
+  width: 100%;
+  height: 48px;
+  padding: 0 14px 0 42px;
+  font-size: 14px;
+  font-weight: 400;
+  color: #ffffff;
+  background: #1a1d28;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.login-modal-input::placeholder {
+  color: rgba(255, 255, 255, 0.25);
+}
+
+.login-modal-input:focus {
+  border-color: rgba(79, 140, 255, 0.5);
+  box-shadow: 0 0 0 3px rgba(79, 140, 255, 0.1);
+}
+
+/* Password toggle */
+.login-password-toggle {
+  position: absolute;
+  right: 12px;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: color 0.2s, background 0.2s;
+  z-index: 1;
+}
+
+.login-password-toggle:hover {
+  color: rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+/* Error message */
+.login-error {
+  font-size: 12px;
+  font-weight: 500;
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.15);
+  border-radius: 8px;
+  padding: 10px 14px;
+  animation: loginShake 0.3s ease;
+}
+
+@keyframes loginShake {
+  0%, 100% { transform: translateX(0); }
+  20%      { transform: translateX(-4px); }
+  40%      { transform: translateX(4px); }
+  60%      { transform: translateX(-2px); }
+  80%      { transform: translateX(2px); }
+}
+
+/* Success message */
+.login-success-msg {
+  font-size: 12px;
+  font-weight: 500;
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.15);
+  border-radius: 8px;
+  padding: 10px 14px;
+  text-align: center;
+}
+
+/* Primary button */
+.login-modal-btn {
+  border: none;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+  margin-top: 4px;
+}
+
+.login-modal-btn-primary {
+  background: #ffffff;
+  color: #0f1219;
+}
+
+.login-modal-btn-primary:hover:not(:disabled) {
+  background: #f0f1f5;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(255, 255, 255, 0.15);
+}
+
+.login-modal-btn-primary:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.login-modal-btn-primary:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* Spinner */
+.login-spinner {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(15, 18, 25, 0.2);
+  border-top-color: #0f1219;
+  border-radius: 50%;
+  animation: loginSpin 0.6s linear infinite;
+}
+
+@keyframes loginSpin {
+  to { transform: rotate(360deg); }
+}
+
+/* OTP description */
+.login-otp-desc {
+  font-size: 13px;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.6);
+  text-align: center;
+}
+
+.login-otp-desc strong {
+  color: #ffffff;
+  font-weight: 600;
+}
+
+/* OTP grid */
+.login-otp-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 10px;
+}
+
+.login-otp-input {
+  width: 100%;
+  aspect-ratio: 1;
+  max-height: 56px;
+  text-align: center;
+  font-size: 20px;
+  font-weight: 700;
+  color: #ffffff;
+  background: #1a1d28;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  outline: none;
+  caret-color: #4f8cff;
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+}
+
+.login-otp-input:focus {
+  border-color: rgba(79, 140, 255, 0.5);
+  box-shadow: 0 0 0 3px rgba(79, 140, 255, 0.12);
+  background: rgba(79, 140, 255, 0.06);
+}
+
+.login-otp-input.filled {
+  border-color: rgba(79, 140, 255, 0.3);
+  background: rgba(79, 140, 255, 0.04);
+}
+
+/* OTP actions */
+.login-otp-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.login-otp-back,
+.login-otp-resend {
+  font-size: 13px;
+  font-weight: 500;
+  border: none;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 4px;
+  border-radius: 6px;
+  transition: color 0.2s, background 0.2s;
+}
+
+.login-otp-back {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.login-otp-back:hover {
+  color: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.login-otp-resend {
+  color: #4f8cff;
+}
+
+.login-otp-resend:hover {
+  color: #6fa3ff;
+  background: rgba(79, 140, 255, 0.08);
+}
+
+/* ---- Login modal responsive ---- */
+@media (max-width: 480px) {
+  .login-modal-overlay {
+    padding: 16px;
+    align-items: flex-end;
+  }
+
+  .login-modal-card {
+    padding: 32px 24px 28px;
+    border-radius: 20px 20px 0 0;
+    max-width: 100%;
+    animation: loginCardInMobile 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  @keyframes loginCardInMobile {
+    from {
+      opacity: 0;
+      transform: translateY(100%);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .login-modal-title {
+    font-size: 20px;
+  }
+
+  .login-step-divider {
+    width: 24px;
+    margin: 0 10px;
+  }
+
+  .login-otp-grid {
+    gap: 8px;
+  }
+
+  .login-otp-input {
+    font-size: 18px;
+    border-radius: 10px;
+  }
+}

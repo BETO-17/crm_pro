@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ExternalLink } from 'lucide-react';
+import LoginModal from './LoginModal';
 
 interface LandingNavbarProps {
   onLogin: () => void;
@@ -7,6 +8,7 @@ interface LandingNavbarProps {
 
 export default function LandingNavbar({ onLogin }: LandingNavbarProps) {
   const [scrolled, setScrolled] = useState(false);
+  const [showLogin, setShowLogin] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -17,39 +19,51 @@ export default function LandingNavbar({ onLogin }: LandingNavbarProps) {
   }, []);
 
   return (
-    <nav
-      className={`landing-navbar ${scrolled ? 'scrolled' : ''}`}
-      role="navigation"
-      aria-label="Navegación principal"
-    >
-      <div className="landing-navbar-left">
-        <div className="landing-logo">
-          <div className="landing-logo-icon" aria-hidden="true">M</div>
-          <div>
-            <span>RetailMetrics 360</span>
-            <span className="landing-logo-sub">Executive Analytics</span>
+    <>
+      <nav
+        className={`landing-navbar ${scrolled ? 'scrolled' : ''}`}
+        role="navigation"
+        aria-label="Navegación principal"
+      >
+        <div className="landing-navbar-left">
+          <div className="landing-logo">
+            <div className="landing-logo-icon" aria-hidden="true">M</div>
+            <div>
+              <span>RetailMetrics 360</span>
+              <span className="landing-logo-sub">Executive Analytics</span>
+            </div>
           </div>
+          <span className="landing-badge-suite">EXECUTIVE SUITE</span>
+
+          <ul className="landing-nav-links">
+            <li><a href="#solucion">Solución</a></li>
+            <li><a href="#modulos">Módulos</a></li>
+            <li><a href="#estrategias">Estrategias</a></li>
+            <li><a href="#casos">Casos de Éxito</a></li>
+            <li><a href="#precios">Precios</a></li>
+          </ul>
         </div>
-        <span className="landing-badge-suite">EXECUTIVE SUITE</span>
 
-        <ul className="landing-nav-links">
-          <li><a href="#solucion">Solución</a></li>
-          <li><a href="#modulos">Módulos</a></li>
-          <li><a href="#estrategias">Estrategias</a></li>
-          <li><a href="#casos">Casos de Éxito</a></li>
-          <li><a href="#precios">Precios</a></li>
-        </ul>
-      </div>
+        <div className="landing-navbar-right">
+          <button className="landing-btn-login" onClick={() => setShowLogin(true)}>
+            Iniciar Sesión
+          </button>
+          <button className="landing-btn-demo">
+            Solicitar Demo Gratuita
+            <ExternalLink size={12} style={{ marginLeft: 4 }} />
+          </button>
+        </div>
+      </nav>
 
-      <div className="landing-navbar-right">
-        <button className="landing-btn-login" onClick={onLogin}>
-          Iniciar Sesión
-        </button>
-        <button className="landing-btn-demo">
-          Solicitar Demo Gratuita
-          <ExternalLink size={12} style={{ marginLeft: 4 }} />
-        </button>
-      </div>
-    </nav>
+      <LoginModal
+        isOpen={showLogin}
+        onClose={() => setShowLogin(false)}
+        onLoginSuccess={() => {
+          setShowLogin(false);
+          onLogin();
+        }}
+      />
+    </>
   );
 }
+
