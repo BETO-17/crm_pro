@@ -307,7 +307,7 @@ function App() {
 
   /* ===== RENDER ===== */
   if (role === 'landing') {
-    return <LandingPage onLogin={() => setRole('admin')} />;
+    return <LandingPage onLogin={() => setRole('analyst')} onAdminLogin={() => setRole('admin')} />;
   }
 
   if (role === 'analyst') {
