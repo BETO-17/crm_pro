@@ -1,14 +1,27 @@
-import { useState, useEffect } from 'react';
-import { ExternalLink } from 'lucide-react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { ExternalLink, ShieldAlert } from 'lucide-react';
 import LoginModal from './LoginModal';
+import AdminLoginModal from './AdminLoginModal';
 
 interface LandingNavbarProps {
   onLogin: () => void;
+  onAdminLogin: () => void;
 }
 
-export default function LandingNavbar({ onLogin }: LandingNavbarProps) {
+/** Number of clicks on the logo required to reveal admin access */
+const ADMIN_CLICK_THRESHOLD = 10;
+/** Time window (ms) to complete the click sequence */
+const ADMIN_CLICK_TIMEOUT = 5000;
+
+export default function LandingNavbar({ onLogin, onAdminLogin }: LandingNavbarProps) {
   const [scrolled, setScrolled] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
+  const [showAdminLogin, setShowAdminLogin] = useState(false);
+  const [adminAccessRevealed, setAdminAccessRevealed] = useState(false);
+
+  /** Track clicks for hidden admin access */
+  const clickCountRef = useRef(0);
+  const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -18,6 +31,37 @@ export default function LandingNavbar({ onLogin }: LandingNavbarProps) {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  /** Clean up timer on unmount */
+  useEffect(() => {
+    return () => {
+      if (clickTimerRef.current) {
+        clearTimeout(clickTimerRef.current);
+      }
+    };
+  }, []);
+
+  /** Handle click on logo/brand name to reveal admin access */
+  const handleLogoClick = useCallback(() => {
+    if (adminAccessRevealed) return;
+
+    clickCountRef.current += 1;
+
+    // Reset timer on each click
+    if (clickTimerRef.current) {
+      clearTimeout(clickTimerRef.current);
+    }
+
+    if (clickCountRef.current >= ADMIN_CLICK_THRESHOLD) {
+      setAdminAccessRevealed(true);
+      clickCountRef.current = 0;
+    } else {
+      // Reset click count if no more clicks within timeout
+      clickTimerRef.current = setTimeout(() => {
+        clickCountRef.current = 0;
+      }, ADMIN_CLICK_TIMEOUT);
+    }
+  }, [adminAccessRevealed]);
+
   return (
     <>
       <nav
@@ -26,7 +70,20 @@ export default function LandingNavbar({ onLogin }: LandingNavbarProps) {
         aria-label="Navegación principal"
       >
         <div className="landing-navbar-left">
-          <div className="landing-logo">
+          <div
+            className="landing-logo"
+            onClick={handleLogoClick}
+            style={{ cursor: 'pointer', userSelect: 'none' }}
+            role="button"
+            tabIndex={0}
+            aria-label="RetailMetrics 360"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handleLogoClick();
+              }
+            }}
+          >
             <div className="landing-logo-icon" aria-hidden="true">M</div>
             <div>
               <span>RetailMetrics 360</span>
@@ -45,6 +102,16 @@ export default function LandingNavbar({ onLogin }: LandingNavbarProps) {
         </div>
 
         <div className="landing-navbar-right">
+          {adminAccessRevealed && (
+            <button
+              className="landing-btn-admin-login"
+              onClick={() => setShowAdminLogin(true)}
+              aria-label="Inicio sesión Admin"
+            >
+              <ShieldAlert size={14} />
+              Inicio Sesión Admin
+            </button>
+          )}
           <button className="landing-btn-login" onClick={() => setShowLogin(true)}>
             Iniciar Sesión
           </button>
@@ -63,7 +130,15 @@ export default function LandingNavbar({ onLogin }: LandingNavbarProps) {
           onLogin();
         }}
       />
+
+      <AdminLoginModal
+        isOpen={showAdminLogin}
+        onClose={() => setShowAdminLogin(false)}
+        onLoginSuccess={() => {
+          setShowAdminLogin(false);
+          onAdminLogin();
+        }}
+      />
     </>
   );
 }
-

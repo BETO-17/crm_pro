@@ -11,9 +11,10 @@ import './landing.css';
 
 interface LandingPageProps {
   onLogin: () => void;
+  onAdminLogin: () => void;
 }
 
-export default function LandingPage({ onLogin }: LandingPageProps) {
+export default function LandingPage({ onLogin, onAdminLogin }: LandingPageProps) {
   const observerRef = useRef<IntersectionObserver | null>(null);
 
   useEffect(() => {
@@ -38,7 +39,7 @@ export default function LandingPage({ onLogin }: LandingPageProps) {
 
   return (
     <div style={{ background: '#fff', minHeight: '100vh' }}>
-      <LandingNavbar onLogin={onLogin} />
+      <LandingNavbar onLogin={onLogin} onAdminLogin={onAdminLogin} />
       <main>
         <HeroSection />
         <DashboardPreview />
