@@ -83,20 +83,6 @@ function App() {
               )}
             </div>
             <div className="topbar-right">
-              <div className="role-switcher">
-                <button
-                  className={`role-switcher-btn ${role === 'admin' ? 'active' : ''}`}
-                  onClick={() => setRole('admin')}
-                >
-                  Admin
-                </button>
-                <button
-                  className={`role-switcher-btn ${role === 'analyst' ? 'active' : ''}`}
-                  onClick={() => setRole('analyst')}
-                >
-                  Analista
-                </button>
-              </div>
               <button className="topbar-icon-btn" aria-label="Notificaciones">
                 <Bell size={16} />
               </button>
@@ -104,6 +90,10 @@ function App() {
                 <Settings size={16} />
               </button>
               <div className="topbar-avatar-small" aria-hidden="true">RA</div>
+              <button className="topbar-logout" onClick={() => setRole('landing')}>
+                <LogOut size={14} />
+                Cerrar Sesión
+              </button>
             </div>
           </>
         );
@@ -120,20 +110,6 @@ function App() {
               </div>
             </div>
             <div className="topbar-right">
-              <div className="role-switcher">
-                <button
-                  className={`role-switcher-btn ${role === 'admin' ? 'active' : ''}`}
-                  onClick={() => setRole('admin')}
-                >
-                  Admin
-                </button>
-                <button
-                  className={`role-switcher-btn ${role === 'analyst' ? 'active' : ''}`}
-                  onClick={() => setRole('analyst')}
-                >
-                  Analista
-                </button>
-              </div>
               <button className="topbar-icon-btn" aria-label="Notificaciones">
                 <Bell size={16} />
               </button>
@@ -142,6 +118,10 @@ function App() {
               </button>
               <button className="topbar-icon-btn" aria-label="Perfil">
                 <UserCircle size={16} />
+              </button>
+              <button className="topbar-logout" onClick={() => setRole('landing')}>
+                <LogOut size={14} />
+                Cerrar Sesión
               </button>
             </div>
           </>
@@ -165,20 +145,6 @@ function App() {
                 <Download size={14} aria-hidden="true" />
                 Exportar Todo
               </button>
-              <div className="role-switcher">
-                <button
-                  className={`role-switcher-btn ${role === 'admin' ? 'active' : ''}`}
-                  onClick={() => setRole('admin')}
-                >
-                  Admin
-                </button>
-                <button
-                  className={`role-switcher-btn ${role === 'analyst' ? 'active' : ''}`}
-                  onClick={() => setRole('analyst')}
-                >
-                  Analista
-                </button>
-              </div>
               <button className="topbar-icon-btn" aria-label="Notificaciones">
                 <Bell size={16} />
               </button>
@@ -186,6 +152,10 @@ function App() {
                 <Settings size={16} />
               </button>
               <div className="topbar-avatar-small" aria-hidden="true">RA</div>
+              <button className="topbar-logout" onClick={() => setRole('landing')}>
+                <LogOut size={14} />
+                Cerrar Sesión
+              </button>
             </div>
           </>
         );
@@ -203,22 +173,8 @@ function App() {
           <span className="topbar-title">analytics  RetailMetrics 360</span>
         </div>
         <div className="topbar-right">
-          <div className="role-switcher">
-            <button
-              className={`role-switcher-btn ${role === 'admin' ? 'active' : ''}`}
-              onClick={() => setRole('admin')}
-            >
-              Admin
-            </button>
-            <button
-              className={`role-switcher-btn ${role === 'analyst' ? 'active' : ''}`}
-              onClick={() => setRole('analyst')}
-            >
-              Analista
-            </button>
-          </div>
           <div className="topbar-avatar-small" aria-hidden="true">RA</div>
-          <button className="topbar-logout" onClick={() => setRole('admin')}>
+          <button className="topbar-logout" onClick={() => setRole('landing')}>
             <LogOut size={14} />
             Cerrar Sesión
           </button>
