@@ -4,8 +4,6 @@ import {
   Users,
   TrendingUp,
   FileText,
-  Settings,
-  HelpCircle,
 } from 'lucide-react';
 import './AdminLayout.css';
 
@@ -29,12 +27,12 @@ export default function AdminLayout({
   activeView,
   onNavigate,
   topBar,
-  sidebarFooter,
 }: AdminLayoutProps) {
   return (
     <div className="admin-layout">
       {/* ---- Sidebar ---- */}
       <aside className="admin-sidebar" aria-label="Sidebar de navegación">
+        {/* Only Platform Branding in Header */}
         <div className="sidebar-header">
           <div className="sidebar-brand">
             <div className="sidebar-brand-icon">RM</div>
@@ -43,15 +41,9 @@ export default function AdminLayout({
               <span className="sidebar-brand-sub">Executive Analytics</span>
             </div>
           </div>
-          <div className="sidebar-profile">
-            <div className="sidebar-avatar" aria-hidden="true">RA</div>
-            <div className="sidebar-user-info">
-              <span className="sidebar-user-name">Retail Admin</span>
-              <span className="sidebar-user-role">Administrator Role</span>
-            </div>
-          </div>
         </div>
 
+        {/* Navigation Items */}
         <nav className="sidebar-nav" aria-label="Navegación principal">
           {navItems.map((item) => {
             const Icon = item.icon;
@@ -69,17 +61,14 @@ export default function AdminLayout({
           })}
         </nav>
 
+        {/* Footer: User Profile Card + Version */}
         <div className="sidebar-footer">
-          {sidebarFooter}
-          <div className="sidebar-footer-actions">
-            <button className="sidebar-footer-btn">
-              <Settings className="nav-icon" aria-hidden="true" />
-              Settings
-            </button>
-            <button className="sidebar-footer-btn">
-              <HelpCircle className="nav-icon" aria-hidden="true" />
-              Support
-            </button>
+          <div className="sidebar-profile">
+            <div className="sidebar-avatar" aria-hidden="true">RA</div>
+            <div className="sidebar-user-info">
+              <span className="sidebar-user-name">Retail Admin</span>
+              <span className="sidebar-user-role">Administrator Role</span>
+            </div>
           </div>
           <div className="sidebar-version">V1.2.0</div>
         </div>

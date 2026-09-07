@@ -3,13 +3,13 @@ import {
   ShoppingCart,
   Clock,
   Truck,
-  MoreHorizontal,
   Plus,
   CheckCircle,
   X,
   Zap,
   Target,
   BarChart3,
+  Building2,
 } from 'lucide-react';
 import type { StrategyStatus } from '../../../types';
 
@@ -57,10 +57,10 @@ const initialStrategies: Strategy[] = [
 ];
 
 const sectors = [
-  { name: 'Retail', percentage: 45, color: '#0a0e1a' },
-  { name: 'Tecnología', percentage: 25, color: '#4f8cff' },
-  { name: 'Logística', percentage: 15, color: '#6b7280' },
-  { name: 'Salud & Otros', percentage: 15, color: '#9ca3af' },
+  { name: 'Retail', percentage: 45, analysts: 189, color: '#4f8cff' },
+  { name: 'Tecnología', percentage: 25, analysts: 105, color: '#6366f1' },
+  { name: 'Logística', percentage: 15, analysts: 63, color: '#22c55e' },
+  { name: 'Salud & Otros', percentage: 15, analysts: 63, color: '#f59e0b' },
 ];
 
 const iconMap = {
@@ -81,7 +81,6 @@ const statusCycle: StrategyStatus[] = ['Planeado', 'En Progreso', 'Revisión'];
 
 export default function Tendencias() {
   const [strategies, setStrategies] = useState(initialStrategies);
-  const [activeTab, setActiveTab] = useState('Overview');
   const [selectedSector, setSelectedSector] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' } | null>(null);
 
@@ -90,7 +89,7 @@ export default function Tendencias() {
     setTimeout(() => setToast(null), 3000);
   };
 
-  const totalAnalysts = sectors.reduce((acc, s) => acc + Math.round(420 * s.percentage / 100), 0);
+  const totalAnalysts = sectors.reduce((acc, s) => acc + s.analysts, 0);
 
   const cycleStatus = (id: string) => {
     setStrategies((prev) =>
@@ -118,14 +117,14 @@ export default function Tendencias() {
     const newStrategy: Strategy = {
       id: Date.now().toString(),
       title: newNames[idx],
-      description: 'Nueva iniciativa estratégica pendiente de definición detallada del alcance y recursos.',
+      description: 'Nueva iniciativa estratégica para optimización operativa.',
       status: 'Planeado',
       icon: icons[idx],
-      progress: 0,
-      owner: 'Sin asignar',
+      progress: 10,
+      owner: 'Carlos Ruiz',
     };
     setStrategies((prev) => [...prev, newStrategy]);
-    showToast(`Estrategia "${newNames[idx]}" creada`);
+    showToast(`Estrategia "${newNames[idx]}" creada ✓`);
   };
 
   const removeStrategy = (id: string) => {
@@ -134,8 +133,13 @@ export default function Tendencias() {
     showToast(`"${s?.title}" eliminada`, 'info');
   };
 
+  const averageProgress = Math.round(
+    strategies.reduce((a, s) => a + s.progress, 0) / (strategies.length || 1)
+  );
+
   return (
-    <>
+    <div className="tendencias-page">
+      {/* Toast Notification */}
       {toast && (
         <div className={`toast toast-${toast.type}`}>
           <CheckCircle size={16} aria-hidden="true" />
@@ -146,86 +150,94 @@ export default function Tendencias() {
         </div>
       )}
 
-      <h1 className="page-title">Tendencias</h1>
-      <p className="page-subtitle">Análisis de distribución y estrategias operativas</p>
+      {/* Page Header */}
+      <h1 className="page-title">Tendencias y Estrategias</h1>
+      <p className="page-subtitle">
+        Monitoreo de distribución de actividad por sector de negocio y control de avance de iniciativas operativas.
+      </p>
 
-      {/* Stats */}
+      {/* Stats Row */}
       <div className="stats-row">
         <div className="stat-chip">
           <span className="stat-chip-number">{totalAnalysts}</span>
-          <span className="stat-chip-label">Total analistas</span>
-        </div>
-        <div className="stat-chip">
-          <span className="stat-chip-number">{strategies.filter((s) => s.status === 'En Progreso').length}</span>
-          <span className="stat-chip-label">En progreso</span>
+          <span className="stat-chip-label">Total analistas activos</span>
         </div>
         <div className="stat-chip">
           <span className="stat-chip-number">{sectors.length}</span>
-          <span className="stat-chip-label">Sectores activos</span>
+          <span className="stat-chip-label">Sectores monitoreados</span>
         </div>
         <div className="stat-chip">
-          <span className="stat-chip-number">{Math.round(strategies.reduce((a, s) => a + s.progress, 0) / strategies.length)}%</span>
-          <span className="stat-chip-label">Avance promedio</span>
+          <span className="stat-chip-number">{strategies.filter((s) => s.status === 'En Progreso').length}</span>
+          <span className="stat-chip-label">Estrategias en progreso</span>
+        </div>
+        <div className="stat-chip">
+          <span className="stat-chip-number">{averageProgress}%</span>
+          <span className="stat-chip-label">Avance global promedio</span>
         </div>
       </div>
 
       <div className="admin-panels">
-        {/* ---- Left: Sector Distribution ---- */}
+        {/* ---- Left: Semantic Horizontal Bars for Sector Distribution ---- */}
         <div className="admin-card">
           <div className="card-header">
-            <h2 className="card-title">
-              <BarChart3 size={18} aria-hidden="true" />
-              Distribución de Analistas por Sector
-            </h2>
-            <button className="card-action-btn" aria-label="Más opciones">
-              <MoreHorizontal size={16} aria-hidden="true" />
-            </button>
+            <div>
+              <h2 className="card-title">
+                <BarChart3 size={18} aria-hidden="true" />
+                Distribución de Analistas por Sector
+              </h2>
+              <p className="card-subtitle">
+                Proporción de carga de trabajo analítica clasificada por verticales de industria.
+              </p>
+            </div>
+            <div className="badge badge-active" style={{ fontSize: 12 }}>
+              {totalAnalysts} analistas
+            </div>
           </div>
 
-          <div className="diamond-chart-container">
-            <div className="diamond-shape" aria-label={`${totalAnalysts} total analistas`}>
-              <div className="diamond-inner">
-                <div className="diamond-number">{totalAnalysts}</div>
-                <div className="diamond-label">Total Analistas</div>
-              </div>
-            </div>
-
-            <div className="sector-legend" role="list" aria-label="Distribución por sector">
-              {sectors.map((sector) => (
-                <button
+          <div className="sectors-bars-container">
+            {sectors.map((sector) => {
+              const isSelected = selectedSector === sector.name;
+              return (
+                <div
                   key={sector.name}
-                  className={`sector-item ${selectedSector === sector.name ? 'sector-selected' : ''}`}
-                  onClick={() => setSelectedSector(selectedSector === sector.name ? null : sector.name)}
-                  role="listitem"
+                  className={`sector-progress-item ${isSelected ? 'selected' : ''}`}
+                  onClick={() => setSelectedSector(isSelected ? null : sector.name)}
                 >
-                  <span
-                    className="sector-dot"
-                    style={{ background: sector.color }}
-                    aria-hidden="true"
-                  />
-                  <span>{sector.name} ({sector.percentage}%)</span>
-                  <span className="sector-count">{Math.round(420 * sector.percentage / 100)}</span>
-                </button>
-              ))}
-            </div>
+                  <div className="sector-bar-header">
+                    <div className="sector-bar-left">
+                      <span className="sector-dot" style={{ background: sector.color }} />
+                      <span className="sector-name">{sector.name}</span>
+                    </div>
+                    <div className="sector-bar-right">
+                      <span className="sector-count">{sector.analysts} analistas</span>
+                      <span className="sector-percentage" style={{ color: sector.color }}>
+                        {sector.percentage}%
+                      </span>
+                    </div>
+                  </div>
 
-            {/* Sector Bars */}
-            <div className="sector-bars">
-              {sectors.map((sector) => (
-                <div key={sector.name} className="sector-bar-row">
-                  <div className="sector-bar-track">
+                  {/* Semantic Horizontal Progress Bar in Pure Vanilla CSS */}
+                  <div className="sector-progress-track">
                     <div
-                      className="sector-bar-fill"
+                      className="sector-progress-fill"
                       style={{
                         width: `${sector.percentage}%`,
                         background: sector.color,
-                        opacity: selectedSector && selectedSector !== sector.name ? 0.3 : 1,
+                        opacity: selectedSector && !isSelected ? 0.35 : 1,
                       }}
                     />
                   </div>
                 </div>
-              ))}
-            </div>
+              );
+            })}
+          </div>
+
+          {/* Sector Breakdown Summary Footnote */}
+          <div className="sector-summary-box">
+            <Building2 size={16} className="summary-icon" />
+            <p className="summary-text">
+              El sector <strong>Retail</strong> concentra la mayor parte del volumen con <strong>45%</strong> de la capacidad analítica instalada, seguido por <strong>Tecnología</strong> con <strong>25%</strong>.
+            </p>
           </div>
         </div>
 
@@ -233,8 +245,11 @@ export default function Tendencias() {
         <div className="admin-card">
           <div className="card-header">
             <div>
-              <h2 className="card-title">Estrategias Operativas</h2>
-              <p className="card-subtitle">Iniciativas clave para optimización Q3</p>
+              <h2 className="card-title">
+                <Target size={18} aria-hidden="true" />
+                Estrategias Operativas
+              </h2>
+              <p className="card-subtitle">Iniciativas clave de optimización y seguimiento de avance.</p>
             </div>
             <button className="btn-new-strategy" onClick={addStrategy}>
               <Plus size={14} aria-hidden="true" />
@@ -256,22 +271,22 @@ export default function Tendencias() {
                       <button
                         className={`badge ${statusClass[strategy.status]} badge-clickable`}
                         onClick={() => cycleStatus(strategy.id)}
-                        title="Click para cambiar estado"
+                        title="Click para alternar estado"
                       >
                         {strategy.status}
                       </button>
                     </div>
                     <p className="strategy-desc">{strategy.description}</p>
 
-                    {/* Progress Bar */}
-                    <div className="strategy-progress">
+                    {/* Unified Color Palette Progress Bar */}
+                    <div className="strategy-progress-wrapper">
                       <div className="strategy-progress-bar">
                         <div
-                          className="strategy-progress-fill"
+                          className="strategy-progress-fill-unified"
                           style={{ width: `${strategy.progress}%` }}
                         />
                       </div>
-                      <span className="strategy-progress-label">{strategy.progress}%</span>
+                      <span className="strategy-progress-label-unified">{strategy.progress}%</span>
                     </div>
 
                     <div className="strategy-meta">
@@ -279,7 +294,7 @@ export default function Tendencias() {
                       <button
                         className="strategy-remove"
                         onClick={() => removeStrategy(strategy.id)}
-                        aria-label={`Eliminar ${strategy.title}`}
+                        aria-label={`Eliminar estrategia ${strategy.title}`}
                       >
                         <X size={14} />
                       </button>
@@ -292,12 +307,12 @@ export default function Tendencias() {
             {strategies.length === 0 && (
               <div className="empty-state">
                 <Target size={32} />
-                <p>No hay estrategias. Crea una nueva para comenzar.</p>
+                <p>No hay estrategias activas. Crea una nueva para comenzar.</p>
               </div>
             )}
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 }

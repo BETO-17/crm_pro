@@ -2,23 +2,17 @@ import { useState } from 'react';
 import {
   Bell,
   Settings,
-  UserCircle,
-  Search,
-  Calendar,
-  Download,
-  FileDown,
   LogOut,
 } from 'lucide-react';
 import LandingPage from './features/landing/LandingPage';
 import AdminLayout from './layouts/AdminLayout';
 import AnalystLayout from './layouts/AnalystLayout';
+import Dashboard from './features/admin/pages/Dashboard';
 import GestionUsuarios from './features/admin/pages/GestionUsuarios';
-import AsignacionModulos from './features/admin/pages/AsignacionModulos';
 import Tendencias from './features/admin/pages/Tendencias';
 import CentroReportes from './features/admin/pages/CentroReportes';
-import Workspaces from './features/admin/pages/Workspaces';
 import PerfilUsuario from './features/analyst/pages/PerfilUsuario';
-import CargaDatos from './features/analyst/pages/CargaDatos';
+import Datasets from './features/analyst/pages/Datasets';
 import ObservacionDatos from './features/analyst/pages/ObservacionDatos';
 import ComparacionAnalisis from './features/analyst/pages/ComparacionAnalisis';
 import AnalystWorkspaces from './features/analyst/pages/AnalystWorkspaces';
@@ -30,150 +24,33 @@ type AppRole = 'landing' | 'admin' | 'analyst';
 type AdminView = 'dashboard' | 'usuarios' | 'tendencias' | 'reportes';
 type AnalystView = 'perfil' | 'carga' | 'observacion' | 'comparacion' | 'workspace' | 'informes';
 
-/** Sub-views within the Usuarios tab */
-type UsuariosSubView = 'gestion' | 'asignacion' | 'workspaces';
-
 function App() {
   const [role, setRole] = useState<AppRole>('landing');
-  const [activeView, setActiveView] = useState<AdminView>('usuarios');
+  const [activeView, setActiveView] = useState<AdminView>('dashboard');
   const [analystView, setAnalystView] = useState<AnalystView>('perfil');
-  const [usuariosSubView, setUsuariosSubView] = useState<UsuariosSubView>('gestion');
 
   const handleNavigate = (view: string) => {
     setActiveView(view as AdminView);
-    if (view === 'usuarios') {
-      setUsuariosSubView('gestion');
-    }
   };
 
   const handleAnalystNavigate = (view: string) => {
     setAnalystView(view as AnalystView);
   };
 
-  /* ===== ADMIN TOP BAR ===== */
+  /* ===== UNIFIED ADMIN TOP BAR ===== */
   const renderAdminTopBar = () => {
-    switch (activeView) {
-      case 'dashboard':
-      case 'usuarios':
-        return (
-          <>
-            <div className="topbar-left">
-              <span className="topbar-title">analytics RetailMetrics 360</span>
-              {activeView === 'usuarios' && (
-                <div className="topbar-tabs">
-                  <button
-                    className={`topbar-tab ${usuariosSubView === 'gestion' ? 'active' : ''}`}
-                    onClick={() => setUsuariosSubView('gestion')}
-                  >
-                    Gestión
-                  </button>
-                  <button
-                    className={`topbar-tab ${usuariosSubView === 'asignacion' ? 'active' : ''}`}
-                    onClick={() => setUsuariosSubView('asignacion')}
-                  >
-                    Asignación
-                  </button>
-                  <button
-                    className={`topbar-tab ${usuariosSubView === 'workspaces' ? 'active' : ''}`}
-                    onClick={() => setUsuariosSubView('workspaces')}
-                  >
-                    Workspaces
-                  </button>
-                </div>
-              )}
-            </div>
-            <div className="topbar-right">
-              <button className="topbar-icon-btn" aria-label="Notificaciones">
-                <Bell size={16} />
-              </button>
-              <button className="topbar-icon-btn" aria-label="Configuración">
-                <Settings size={16} />
-              </button>
-              <div className="topbar-avatar-small" aria-hidden="true">RA</div>
-              <button className="topbar-logout" onClick={() => setRole('landing')}>
-                <LogOut size={14} />
-                Cerrar Sesión
-              </button>
-            </div>
-          </>
-        );
-
-      case 'tendencias':
-        return (
-          <>
-            <div className="topbar-left">
-              <span className="topbar-title">RetailMetrics 360</span>
-              <div className="topbar-tabs">
-                <button className="topbar-tab active">Overview</button>
-                <button className="topbar-tab">Regional</button>
-                <button className="topbar-tab">Stores</button>
-              </div>
-            </div>
-            <div className="topbar-right">
-              <button className="topbar-icon-btn" aria-label="Notificaciones">
-                <Bell size={16} />
-              </button>
-              <button className="topbar-icon-btn" aria-label="Configuración">
-                <Settings size={16} />
-              </button>
-              <button className="topbar-icon-btn" aria-label="Perfil">
-                <UserCircle size={16} />
-              </button>
-              <button className="topbar-logout" onClick={() => setRole('landing')}>
-                <LogOut size={14} />
-                Cerrar Sesión
-              </button>
-            </div>
-          </>
-        );
-
-      case 'reportes':
-        return (
-          <>
-            <div className="topbar-left">
-              <div className="topbar-search">
-                <Search size={14} aria-hidden="true" />
-                <input type="text" placeholder="Search reports..." aria-label="Buscar reportes" />
-              </div>
-            </div>
-            <div className="topbar-right">
-              <div className="topbar-date-range">
-                <Calendar size={14} aria-hidden="true" />
-                2023 - 2024
-              </div>
-              <button className="topbar-export-all">
-                <Download size={14} aria-hidden="true" />
-                Exportar Todo
-              </button>
-              <button className="topbar-icon-btn" aria-label="Notificaciones">
-                <Bell size={16} />
-              </button>
-              <button className="topbar-icon-btn" aria-label="Configuración">
-                <Settings size={16} />
-              </button>
-              <div className="topbar-avatar-small" aria-hidden="true">RA</div>
-              <button className="topbar-logout" onClick={() => setRole('landing')}>
-                <LogOut size={14} />
-                Cerrar Sesión
-              </button>
-            </div>
-          </>
-        );
-
-      default:
-        return null;
-    }
-  };
-
-  /* ===== ANALYST TOP BAR ===== */
-  const renderAnalystTopBar = () => {
     return (
       <>
-        <div className="topbar-left">
-          <span className="topbar-title">analytics  RetailMetrics 360</span>
-        </div>
+        <div className="topbar-left" />
         <div className="topbar-right">
-          <div className="topbar-avatar-small" aria-hidden="true">RA</div>
+          <button className="topbar-icon-btn" aria-label="Notificaciones" title="3 nuevas notificaciones">
+            <Bell size={16} />
+            <span className="topbar-badge-dot" />
+          </button>
+          <button className="topbar-icon-btn" aria-label="Configuración" title="Configuración del sistema">
+            <Settings size={16} />
+          </button>
+          <div className="topbar-avatar-small" aria-hidden="true" title="Retail Admin">RA</div>
           <button className="topbar-logout" onClick={() => setRole('landing')}>
             <LogOut size={14} />
             Cerrar Sesión
@@ -183,61 +60,19 @@ function App() {
     );
   };
 
-  /** Render sidebar footer based on view */
-  const renderSidebarFooter = () => {
-    switch (activeView) {
-      case 'tendencias':
-        return (
-          <button className="sidebar-export-btn">
-            <FileDown size={16} aria-hidden="true" />
-            Export Report
-          </button>
-        );
-      case 'reportes':
-        return (
-          <button className="sidebar-generate-btn">
-            + Generate Report
-          </button>
-        );
-      default:
-        return null;
-    }
-  };
-
-  /** Render admin content */
+  /* ===== ADMIN CONTENT ===== */
   const renderAdminContent = () => {
     switch (activeView) {
       case 'dashboard':
-        return (
-          <>
-            <h1 className="page-title">Dashboard</h1>
-            <p className="page-subtitle">Vista general del panel de administración.</p>
-            <div className="admin-panels">
-              <div className="admin-card" style={{ gridColumn: '1 / -1', minHeight: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <p style={{ color: 'var(--text-secondary)', fontSize: 15 }}>
-                  Panel de control principal — Selecciona una sección del menú lateral.
-                </p>
-              </div>
-            </div>
-          </>
-        );
+        return <Dashboard onNavigate={handleNavigate} />;
       case 'usuarios':
-        switch (usuariosSubView) {
-          case 'gestion':
-            return <GestionUsuarios />;
-          case 'asignacion':
-            return <AsignacionModulos />;
-          case 'workspaces':
-            return <Workspaces />;
-          default:
-            return <GestionUsuarios />;
-        }
+        return <GestionUsuarios />;
       case 'tendencias':
         return <Tendencias />;
       case 'reportes':
         return <CentroReportes />;
       default:
-        return <GestionUsuarios />;
+        return <Dashboard onNavigate={handleNavigate} />;
     }
   };
 
@@ -247,13 +82,13 @@ function App() {
       case 'perfil':
         return <PerfilUsuario />;
       case 'carga':
-        return <CargaDatos />;
+        return <Datasets onNavigate={handleAnalystNavigate} />;
       case 'observacion':
-        return <ObservacionDatos />;
+        return <ObservacionDatos onNavigate={handleAnalystNavigate} />;
       case 'comparacion':
-        return <ComparacionAnalisis />;
+        return <ComparacionAnalisis onNavigate={handleAnalystNavigate} />;
       case 'workspace':
-        return <AnalystWorkspaces />;
+        return <AnalystWorkspaces onNavigate={handleAnalystNavigate} />;
       case 'informes':
         return <Informes />;
       default:
@@ -271,7 +106,7 @@ function App() {
       <AnalystLayout
         activeView={analystView}
         onNavigate={handleAnalystNavigate}
-        topBar={renderAnalystTopBar()}
+        onLogout={() => setRole('landing')}
       >
         {renderAnalystContent()}
       </AnalystLayout>
@@ -283,7 +118,6 @@ function App() {
       activeView={activeView}
       onNavigate={handleNavigate}
       topBar={renderAdminTopBar()}
-      sidebarFooter={renderSidebarFooter()}
     >
       {renderAdminContent()}
     </AdminLayout>
