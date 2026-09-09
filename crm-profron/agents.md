@@ -1,34 +1,762 @@
-# Role: Lead Frontend Architect & SaaS UI/UX Specialist (RetailMetrics 360)
+# AGENTS.md
 
-## Persona & Objective
-You are an elite Senior Software Architect and Frontend Specialist with deep expertise in React, TypeScript, Vite, modern CSS (Tailwind), and scalable feature-based architecture. Your goal is to guide the development of **RetailMetrics 360**, a multi-role data analytics CRM. You must ensure high-performance data handling, strict role-based access control (RBAC), and a pristine, data-centric user experience.
+## RetailMetrics 360
 
-## Project Context & Architecture Rule
-This project is a B2B SaaS platform with distinct visual environments:
-1. **Public Marketing:** Landing Page & Auth (Imágenes 4 y 5).
-2. **Admin Dashboard:** User management, global module permissions (Imagen 1).
-3. **Analyst Workspace:** Profile, drag-and-drop CSV upload, data observation, charts, and AI Assistant (Imágenes 2 y 3).
+Este archivo define las reglas y contexto que los agentes de IA deben seguir al trabajar en el frontend de **RetailMetrics 360**.
 
-### Core Rules & Responsibilities
+---
 
-#### 1. Architectural Integrity & Scalability
-- **Feature-Based Structure (Strict):** Code must be organized in `src/features/` (auth, landing, admin, analyst). Never mix logic between features.
-- **Component Separation:** Enforce a clean separation between **Container Components** (logic, state, API calls) and **Presentational Components** (pure UI). 
-- **State Management:** Use **Zustand** or React Context for global auth state and the active user's roles. Keep data fetching (CSV files, metrics, table rows) localized to the specific feature using custom hooks.
-- **Type Safety:** Strict TypeScript typing for Data Models. Define interfaces for `User`, `Role`, `Dataset`, `RevenueData`, and `ModulePermissions` in `src/types/`. Never use `any`.
+# 1. OBJETIVO DEL PROYECTO
 
-#### 2. Data Handling & Performance (Crucial for this app)
-- **CSV Processing:** Implement efficient parsing and virtualization for large CSV files (Imagen 2). Use libraries like `react-dropzone` for uploads and `papaparse` for parsing, ensuring UI does not freeze on large datasets.
-- **Table Optimization:** For the data observation tables (Imagen 3), utilize virtual scrolling (e.g., TanStack Virtual) for thousands of rows. Optimize filters and sorting with `useMemo`.
-- **Charts:** Optimize chart rendering (Imagen 3). Lazy load charting libraries (like Recharts) to prevent bloating the initial bundle.
-- **Error Handling:** Implement robust error/empty/loading states for the Drag & Drop area, API interactions, and the AI Assistant chat.
+RetailMetrics 360 es una plataforma CRM SaaS B2B orientada al análisis de datos del sector retail.
 
-#### 3. User Experience & Role-Based Design (RBAC)
-- **Visual Consistency:** Align all UI with the design system seen in the images (Dark sidebar, clean whites, green accents for landing, specific cards for metrics).
-- **Role-Based Rendering:** Strictly implement the UI logic for the Admin (toggling modules, managing users) vs. the Analyst (displaying only enabled modules, uploading files). 
-- **Accessibility (a11y):** Ensure semantic HTML tags for dashboards, tables, and forms. Provide proper ARIA labels for modals, dropdowns, and the drag-and-drop file upload zone.
+El frontend debe proporcionar una experiencia moderna, profesional, responsive y escalable para:
 
-## Workflow Instructions
-1. **Analyze First:** Before writing code, always check if a component or utility already exists in `src/components`, `src/lib`, or `src/features/[feature]/`.
-2. **Step-by-Step Implementation:** For complex features (like the Chat AI or the CSV Data View), propose a clear plan (state management, file handling, API structure) before generating full blocks of code.
-3. **Review & Refactor:** Constantly evaluate code for maintainability, performance bottlenecks (especially regarding large datasets), and adherence to the specific role-based UI logic.
+* Administradores
+* Analistas
+* Gerentes
+
+La aplicación permite:
+
+* Gestionar usuarios.
+* Gestionar permisos y módulos.
+* Gestionar workspaces.
+* Cargar datasets CSV.
+* Explorar datos.
+* Filtrar información.
+* Comparar datasets.
+* Visualizar tendencias.
+* Generar informes.
+* Mostrar métricas.
+* Preparar la aplicación para futura conexión con un backend/API.
+
+---
+
+# 2. STACK TECNOLÓGICO
+
+Utilizar exclusivamente las tecnologías existentes en el proyecto, salvo que el usuario solicite explícitamente otra tecnología.
+
+* React 19
+* TypeScript 6
+* Vite 8
+* Lucide React
+* CSS Vanilla
+* ESLint 10
+* TypeScript Strict Mode
+
+No introducir Tailwind, Bootstrap, Material UI, Ant Design u otras librerías de UI sin autorización explícita.
+
+---
+
+# 3. ARQUITECTURA
+
+El proyecto utiliza arquitectura Feature-Based.
+
+Estructura principal:
+
+```text
+src/
+├── assets/
+├── features/
+│   ├── landing/
+│   ├── admin/
+│   └── analyst/
+├── layouts/
+│   ├── AdminLayout.tsx
+│   └── AnalystLayout.tsx
+├── types/
+│   └── index.ts
+├── App.tsx
+├── App.css
+├── index.css
+└── main.tsx
+```
+
+Cada funcionalidad debe permanecer dentro de su feature correspondiente.
+
+Ejemplo:
+
+```text
+features/
+└── analyst/
+    ├── CargaDatos.tsx
+    ├── ObservacionDatos.tsx
+    ├── ComparacionAnalisis.tsx
+    ├── Informes.tsx
+    ├── AnalystWorkspaces.tsx
+    └── analyst.css
+```
+
+No mover archivos entre features sin una razón arquitectónica válida.
+
+---
+
+# 4. REGLA PRINCIPAL: ANALIZAR ANTES DE CODIFICAR
+
+Antes de modificar o crear código:
+
+1. Comprender el requerimiento.
+2. Identificar qué feature corresponde.
+3. Revisar componentes existentes.
+4. Revisar tipos existentes.
+5. Revisar estilos existentes.
+6. Determinar si existe un componente reutilizable.
+7. Identificar dependencias entre componentes.
+8. Definir la solución.
+9. Implementar.
+10. Verificar que no se rompan funcionalidades existentes.
+
+No crear código duplicado cuando ya existe una solución reutilizable.
+
+---
+
+# 5. PRINCIPIOS DE FRONTEND
+
+Priorizar:
+
+* Componentes reutilizables.
+* Código limpio.
+* TypeScript estricto.
+* Separación de responsabilidades.
+* Bajo acoplamiento.
+* Alta cohesión.
+* Accesibilidad.
+* Responsive design.
+* Consistencia visual.
+* Escalabilidad.
+* Mantenibilidad.
+
+Evitar:
+
+* Código duplicado.
+* `any` innecesario.
+* Componentes gigantes.
+* Lógica de negocio mezclada con UI.
+* CSS inline excesivo.
+* Valores mágicos.
+* Estados duplicados.
+* Funciones innecesariamente complejas.
+
+---
+
+# 6. REACT
+
+Utilizar componentes funcionales y Hooks.
+
+Preferir:
+
+```tsx
+function UserCard({ user }: UserCardProps) {
+  return (
+    <article>
+      ...
+    </article>
+  );
+}
+```
+
+Evitar componentes excesivamente grandes.
+
+Si un componente supera considerablemente la responsabilidad de una sola vista, evaluar dividirlo en componentes especializados.
+
+Ejemplo:
+
+```text
+GestionUsuarios.tsx
+├── UserTable
+├── UserFilters
+├── UserModal
+├── UserStatusBadge
+└── UserActions
+```
+
+---
+
+# 7. TYPESCRIPT
+
+TypeScript debe utilizarse de forma estricta.
+
+Los datos deben tener tipos explícitos.
+
+Ejemplo:
+
+```tsx
+interface UserCardProps {
+  user: User;
+  onEdit: (user: User) => void;
+}
+```
+
+Utilizar los tipos existentes en:
+
+```text
+src/types/index.ts
+```
+
+No duplicar interfaces que ya existen.
+
+Evitar:
+
+```tsx
+const user: any = ...
+```
+
+Preferir:
+
+```tsx
+const user: User = ...
+```
+
+Cuando sea necesario crear un nuevo tipo, determinar primero si pertenece a:
+
+```text
+src/types/index.ts
+```
+
+o si debe permanecer local al feature.
+
+---
+
+# 8. ROLES Y RBAC
+
+Actualmente existen tres roles:
+
+```text
+admin
+analyst
+manager
+```
+
+Conceptualmente:
+
+### Administrador
+
+Puede:
+
+* Gestionar usuarios.
+* Asignar módulos.
+* Gestionar workspaces.
+* Visualizar tendencias.
+* Generar reportes.
+
+### Analista
+
+Puede:
+
+* Cargar CSV.
+* Explorar datasets.
+* Comparar información.
+* Analizar datos.
+* Gestionar workspaces.
+* Generar informes.
+
+### Gerente
+
+Actualmente está preparado para futura expansión.
+
+No asumir permisos del gerente si no están definidos.
+
+---
+
+# 9. NAVEGACIÓN
+
+Actualmente la navegación utiliza estado local en:
+
+```text
+App.tsx
+```
+
+No introducir React Router automáticamente.
+
+Si el usuario solicita implementar routing real, evaluar:
+
+* React Router.
+* Rutas protegidas.
+* Rutas por rol.
+* Layouts.
+* Manejo de rutas desconocidas.
+
+La implementación debe conservar la navegación existente mientras se realiza la migración.
+
+---
+
+# 10. LANDING PAGE
+
+La landing pertenece a:
+
+```text
+src/features/landing/
+```
+
+Componentes principales:
+
+```text
+LandingPage.tsx
+LandingNavbar.tsx
+HeroSection.tsx
+ModulesSection.tsx
+PillarsSection.tsx
+DashboardPreview.tsx
+TestimonialsSection.tsx
+PricingSection.tsx
+FooterLanding.tsx
+```
+
+La landing debe ser:
+
+* Pública.
+* Responsive.
+* Visualmente profesional.
+* Orientada a conversión B2B.
+* Coherente con la identidad de RetailMetrics 360.
+
+No convertir la landing en un dashboard administrativo.
+
+---
+
+# 11. ADMIN
+
+El panel administrativo utiliza:
+
+```text
+src/features/admin/
+```
+
+Y:
+
+```text
+src/layouts/AdminLayout.tsx
+```
+
+Módulos:
+
+```text
+GestionUsuarios
+AsignacionModulos
+Workspaces
+Tendencias
+CentroReportes
+```
+
+Mantener una experiencia visual consistente entre todas las vistas administrativas.
+
+---
+
+# 12. ANALYST
+
+El espacio del analista utiliza:
+
+```text
+src/features/analyst/
+```
+
+Y:
+
+```text
+src/layouts/AnalystLayout.tsx
+```
+
+Módulos:
+
+```text
+PerfilUsuario
+CargaDatos
+ObservacionDatos
+ComparacionAnalisis
+AnalystWorkspaces
+Informes
+```
+
+El flujo conceptual del analista es:
+
+```text
+Cargar datos
+     ↓
+Explorar datos
+     ↓
+Filtrar
+     ↓
+Comparar
+     ↓
+Analizar
+     ↓
+Generar informe
+```
+
+Las nuevas funcionalidades relacionadas con análisis deben respetar este flujo.
+
+---
+
+# 13. CSV Y DATASETS
+
+La carga de CSV debe considerar:
+
+* Drag & drop.
+* Selección manual de archivo.
+* Validación de extensión.
+* Estado de carga.
+* Estado de error.
+* Estado vacío.
+* Vista previa.
+* Información del dataset.
+
+Preparar la arquitectura para futura integración con API.
+
+No asumir que los datos permanecerán estáticos.
+
+---
+
+# 14. ESTADOS DE UI
+
+Toda vista que trabaje con datos debe considerar:
+
+### Loading
+
+```text
+Cargando información...
+```
+
+### Empty
+
+```text
+No hay datos disponibles.
+```
+
+### Error
+
+```text
+No pudimos cargar la información.
+```
+
+### Success
+
+Mostrar los datos correctamente.
+
+Evitar interfaces que solamente contemplen el estado exitoso.
+
+---
+
+# 15. CSS
+
+El proyecto utiliza CSS Vanilla.
+
+Respetar la organización actual:
+
+```text
+src/index.css
+src/App.css
+src/features/landing/landing.css
+src/features/admin/admin.css
+src/features/analyst/analyst.css
+src/layouts/AdminLayout.css
+src/layouts/AnalystLayout.css
+```
+
+Antes de crear estilos nuevos:
+
+1. Revisar si existe una clase reutilizable.
+2. Revisar variables CSS.
+3. Mantener consistencia con el diseño actual.
+4. Evitar duplicación.
+
+No crear estilos inline salvo casos justificados.
+
+---
+
+# 16. RESPONSIVE DESIGN
+
+Todas las interfaces nuevas deben funcionar correctamente en:
+
+* Desktop.
+* Laptop.
+* Tablet.
+* Mobile.
+
+No diseñar únicamente para escritorio.
+
+Considerar especialmente:
+
+* Sidebar.
+* Topbar.
+* Tablas.
+* Formularios.
+* Cards.
+* Gráficos.
+* Modales.
+* Menús.
+
+En mobile, las tablas pueden requerir:
+
+* Scroll horizontal.
+* Reorganización.
+* Vista alternativa.
+
+---
+
+# 17. ICONOS
+
+Utilizar:
+
+```text
+lucide-react
+```
+
+No introducir otra biblioteca de iconos.
+
+Ejemplo:
+
+```tsx
+import { Users, Settings, BarChart3 } from "lucide-react";
+```
+
+Los iconos deben tener una función clara y no utilizarse solamente como decoración innecesaria.
+
+---
+
+# 18. UX
+
+Toda nueva funcionalidad debe responder:
+
+* ¿Qué puede hacer el usuario?
+* ¿Qué información necesita?
+* ¿Cuál es la acción principal?
+* ¿Qué ocurre después de hacer clic?
+* ¿Qué ocurre si falla?
+* ¿Qué ocurre si no existen datos?
+
+Priorizar interfaces simples y claras.
+
+Evitar sobrecargar las pantallas con elementos visuales innecesarios.
+
+---
+
+# 19. DASHBOARDS
+
+Los dashboards deben priorizar:
+
+1. KPIs importantes.
+2. Tendencias.
+3. Comparaciones.
+4. Alertas.
+5. Acciones relevantes.
+
+No llenar el dashboard de gráficos solamente porque existe espacio.
+
+Cada gráfico debe responder una pregunta de negocio.
+
+---
+
+# 20. DATOS MOCK
+
+Actualmente el proyecto utiliza datos mock.
+
+Los mocks deben mantenerse separados de la presentación cuando sea posible.
+
+Evitar llenar componentes con grandes cantidades de objetos estáticos.
+
+Preparar las estructuras para posteriormente reemplazar:
+
+```text
+Mock
+↓
+Service/API
+↓
+Backend
+```
+
+sin tener que reescribir toda la interfaz.
+
+---
+
+# 21. API FUTURA
+
+El frontend debe prepararse para una futura API.
+
+Una arquitectura futura recomendada:
+
+```text
+components
+     ↓
+hooks
+     ↓
+services
+     ↓
+API
+```
+
+No colocar llamadas HTTP directamente dentro de múltiples componentes si posteriormente serán reutilizadas.
+
+---
+
+# 22. SEGURIDAD FRONTEND
+
+Nunca almacenar:
+
+* Contraseñas.
+* Tokens sensibles en código fuente.
+* Secretos.
+* API keys privadas.
+
+No asumir que ocultar una opción visual equivale a seguridad real.
+
+La autorización real deberá ser validada posteriormente por el backend.
+
+---
+
+# 23. ACCESIBILIDAD
+
+Las interfaces deben considerar:
+
+* HTML semántico.
+* Labels en formularios.
+* `aria-label` cuando sea necesario.
+* Navegación mediante teclado.
+* Contraste adecuado.
+* Estados de focus.
+* Botones con propósito claro.
+
+No utilizar un `<div>` como botón cuando pueda utilizarse `<button>`.
+
+---
+
+# 24. PERFORMANCE
+
+Evitar optimizaciones prematuras.
+
+Sin embargo:
+
+* Evitar renders innecesarios.
+* Evitar cálculos pesados durante cada render.
+* Dividir componentes grandes.
+* Optimizar imágenes cuando corresponda.
+* Utilizar memoización solamente cuando tenga una razón clara.
+
+---
+
+# 25. CAMBIOS EXISTENTES
+
+Cuando se solicite modificar una funcionalidad:
+
+* No reescribir archivos completos innecesariamente.
+* No eliminar funcionalidades existentes sin autorización.
+* No cambiar nombres públicos de componentes sin necesidad.
+* No modificar estilos globales para solucionar un problema local.
+* No romper otras features.
+
+Realizar cambios mínimos y controlados.
+
+---
+
+# 26. CREACIÓN DE NUEVAS FUNCIONALIDADES
+
+Antes de crear una funcionalidad:
+
+```text
+1. Identificar feature.
+2. Revisar componentes existentes.
+3. Revisar tipos.
+4. Revisar CSS.
+5. Determinar reutilización.
+6. Diseñar componente.
+7. Implementar.
+8. Revisar responsive.
+9. Ejecutar lint.
+10. Ejecutar build.
+```
+
+---
+
+# 27. VALIDACIÓN
+
+Después de realizar cambios importantes ejecutar:
+
+```bash
+npm run lint
+```
+
+y:
+
+```bash
+npm run build
+```
+
+Si alguno falla:
+
+1. Identificar el error.
+2. Corregirlo.
+3. Ejecutar nuevamente.
+4. No ignorar errores de TypeScript o ESLint.
+
+---
+
+# 28. REGLA CONTRA SOBREINGENIERÍA
+
+No introducir:
+
+* Librerías innecesarias.
+* Arquitecturas complejas.
+* Patrones que el proyecto todavía no necesita.
+* Abstracciones prematuras.
+
+La solución debe ser proporcional al problema.
+
+---
+
+# 29. FORMA DE TRABAJO DEL AGENTE
+
+Cuando el usuario solicite una nueva funcionalidad, responder internamente siguiendo este proceso:
+
+```text
+REQUERIMIENTO
+     ↓
+ANÁLISIS
+     ↓
+ARQUITECTURA
+     ↓
+COMPONENTES
+     ↓
+TIPOS
+     ↓
+ESTADOS
+     ↓
+ESTILOS
+     ↓
+IMPLEMENTACIÓN
+     ↓
+VALIDACIÓN
+```
+
+Si existe una ambigüedad importante, preguntar antes de realizar cambios destructivos.
+
+Si el requerimiento es suficientemente claro, no realizar preguntas innecesarias.
+
+---
+
+# 30. PRIORIDADES
+
+Cuando existan conflictos entre decisiones, priorizar:
+
+1. Funcionalidad.
+2. Mantenibilidad.
+3. TypeScript.
+4. UX.
+5. Accesibilidad.
+6. Responsive.
+7. Consistencia visual.
+8. Performance.
+
+---
+
+# 31. REGLA FINAL
+
+RetailMetrics 360 debe sentirse como un producto SaaS B2B profesional.
+
+Cada cambio debe parecer parte del mismo producto.
+
+No crear componentes aislados que solamente funcionen individualmente.
+
+Antes de implementar, preguntarse:
+
+> "¿Esto encaja realmente dentro de RetailMetrics 360 y su arquitectura actual?"
+
+Si la respuesta es no, replantear la solución.

@@ -81,7 +81,6 @@ const statusCycle: StrategyStatus[] = ['Planeado', 'En Progreso', 'Revisión'];
 
 export default function Tendencias() {
   const [strategies, setStrategies] = useState(initialStrategies);
-  const [activeTab, setActiveTab] = useState('Overview');
   const [selectedSector, setSelectedSector] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' } | null>(null);
 

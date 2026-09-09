@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   Filter,
   Save,
@@ -7,34 +7,13 @@ import {
   Bot,
   UserCircle,
   ArrowDown,
+  RefreshCw,
+  Database,
+  AlertCircle,
+  CheckCircle2,
+  Edit3,
 } from 'lucide-react';
-
-/* ---- Simulated Data ---- */
-interface DataRow {
-  rowNum: number;
-  transaction_id: string;
-  store_code: string;
-  revenue_usd: number;
-  date: string;
-  category: string;
-  units: number;
-  discount_pct: number;
-}
-
-const simulatedRows: DataRow[] = [
-  { rowNum: 1, transaction_id: 'TRX-9981', store_code: 'NY-01', revenue_usd: 4520.00, date: '2023-09-01', category: 'Electronics', units: 12, discount_pct: 5 },
-  { rowNum: 2, transaction_id: 'TRX-9982', store_code: 'LA-04', revenue_usd: 1248.50, date: '2023-09-01', category: 'Apparel', units: 34, discount_pct: 10 },
-  { rowNum: 3, transaction_id: 'TRX-9983', store_code: 'CHI-02', revenue_usd: 89.99, date: '2023-09-02', category: 'Groceries', units: 5, discount_pct: 0 },
-  { rowNum: 4, transaction_id: 'TRX-9984', store_code: 'MIA-01', revenue_usd: 560.25, date: '2023-09-02', category: 'Home', units: 8, discount_pct: 15 },
-  { rowNum: 5, transaction_id: 'TRX-9985', store_code: 'SF-03', revenue_usd: 3200.00, date: '2023-09-03', category: 'Electronics', units: 6, discount_pct: 8 },
-  { rowNum: 6, transaction_id: 'TRX-9986', store_code: 'NY-01', revenue_usd: 780.30, date: '2023-09-03', category: 'Apparel', units: 22, discount_pct: 12 },
-  { rowNum: 7, transaction_id: 'TRX-9987', store_code: 'DAL-02', revenue_usd: 1890.00, date: '2023-09-04', category: 'Electronics', units: 4, discount_pct: 3 },
-  { rowNum: 8, transaction_id: 'TRX-9988', store_code: 'BOS-01', revenue_usd: 245.75, date: '2023-09-04', category: 'Groceries', units: 15, discount_pct: 0 },
-  { rowNum: 9, transaction_id: 'TRX-9989', store_code: 'LA-04', revenue_usd: 5100.00, date: '2023-09-05', category: 'Electronics', units: 10, discount_pct: 7 },
-  { rowNum: 10, transaction_id: 'TRX-9990', store_code: 'CHI-02', revenue_usd: 67.50, date: '2023-09-05', category: 'Groceries', units: 3, discount_pct: 0 },
-  { rowNum: 11, transaction_id: 'TRX-9991', store_code: 'MIA-01', revenue_usd: 2340.80, date: '2023-09-06', category: 'Home', units: 18, discount_pct: 20 },
-  { rowNum: 12, transaction_id: 'TRX-9992', store_code: 'SF-03', revenue_usd: 920.00, date: '2023-09-06', category: 'Apparel', units: 28, discount_pct: 5 },
-];
+import { supabase } from '../../../lib/supabaseClient';
 
 interface ChatMessage {
   id: string;
@@ -42,57 +21,170 @@ interface ChatMessage {
   text: string;
 }
 
+interface DatasetOption {
+  tableName: string;
+  displayName: string;
+  totalRows?: number;
+  totalColumns?: number;
+}
+
+const cleanColumnName = (colName: string): string => {
+  let cleanName = colName.replace(/[^a-zA-Z0-9_]/g, '_').trim().toLowerCase();
+  if (cleanName && /^[0-9]/.test(cleanName)) {
+    cleanName = 'col_' + cleanName;
+  }
+  return cleanName;
+};
+
+const getTableNameFromFilename = (filename: string): string => {
+  const baseName = cleanColumnName(filename.replace(/\.csv$/i, ''));
+  return `dataset_${baseName}`;
+};
+
 const initialMessages: ChatMessage[] = [
   {
     id: '1',
     sender: 'bot',
-    text: 'Hola. Estoy analizando el dataset Q3_Ventas_Nacionales.csv. Noté que la columna \'revenue_usd\' tiene un sesgo hacia la derecha. ¿Quieres que aplique una transformación logarítmica para normalizarla?',
+    text: 'Hola. Estoy conectado a la base de datos de Supabase. Puedes consultarme sobre los datos de tus datasets.',
   },
-  {
-    id: '2',
-    sender: 'user',
-    text: 'No, por ahora solo muéstrame las tiendas con revenue > $1,000.',
-  },
-  {
-    id: '3',
-    sender: 'bot',
-    text: 'Entendido. He filtrado las filas donde revenue_usd > $1,000. Se encontraron 7 registros que cumplen el criterio. Las tiendas NY-01, LA-04, SF-03, DAL-02 y MIA-01 superan ese umbral.',
-  },
-];
-
-const distributionBars = [
-  { height: 65, color: '#4f8cff' },
-  { height: 85, color: '#4f8cff' },
-  { height: 45, color: '#4f8cff' },
-  { height: 30, color: '#94a3b8' },
-  { height: 20, color: '#94a3b8' },
-];
-
-const datasets = [
-  'Q3_Ventas_Nacionales.csv',
-  'Inventario_Regional.xlsx',
-  'Precios_Competencia.csv',
-  'Forecast_Q4.xlsx',
 ];
 
 export default function ObservacionDatos() {
-  const [selectedDataset, setSelectedDataset] = useState(datasets[0]);
-  const [sortCol, setSortCol] = useState<string>('revenue_usd');
+  const [datasetsList, setDatasetsList] = useState<DatasetOption[]>([]);
+  const [selectedDataset, setSelectedDataset] = useState<string>(
+    localStorage.getItem('lastUploadedTable') || 'dataset_ventas_tecnologia_limpio'
+  );
+  const [isManualInput, setIsManualInput] = useState(false);
+  const [sortCol, setSortCol] = useState<string>('');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
   const [chatInput, setChatInput] = useState('');
-  const [selectedColumn, setSelectedColumn] = useState('revenue_usd');
+  const [selectedColumn, setSelectedColumn] = useState('');
+  const [dataRows, setDataRows] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const sortedRows = [...simulatedRows].sort((a, b) => {
-    const aVal = a[sortCol as keyof DataRow];
-    const bVal = b[sortCol as keyof DataRow];
-    if (typeof aVal === 'number' && typeof bVal === 'number') {
-      return sortDir === 'asc' ? aVal - bVal : bVal - aVal;
+  // Load available datasets from Supabase directly & localStorage
+  const loadDatasets = async () => {
+    try {
+      const defaultOptions: DatasetOption[] = [
+        { tableName: 'dataset_ventas_tecnologia_limpio', displayName: 'ventas_tecnologia_limpio.csv', totalRows: 1813 },
+        { tableName: 'dataset_ventas_tienda_tech_4000', displayName: 'ventas_tienda_tech_4000.csv', totalRows: 4000 },
+        { tableName: 'dataset_fetch_california_housing', displayName: 'fetch_california_housing.csv', totalRows: 20640 },
+        { tableName: 'dataset_train', displayName: 'train.csv', totalRows: 891 },
+      ];
+
+      // Read persistent datasets from localStorage
+      const localSavedStr = localStorage.getItem('analyst_saved_datasets');
+      if (localSavedStr) {
+        try {
+          const localParsed = JSON.parse(localSavedStr);
+          localParsed.forEach((item: any) => {
+            if (item.tableName && !defaultOptions.some((d) => d.tableName === item.tableName)) {
+              defaultOptions.unshift({
+                tableName: item.tableName,
+                displayName: item.name || item.tableName,
+                totalRows: item.rows,
+                totalColumns: item.columnsCount,
+              });
+            }
+          });
+        } catch {
+          // ignore
+        }
+      }
+
+      const { data, error } = await supabase
+        .from('datasets')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.warn('Error loading datasets list from Supabase:', error);
+      }
+
+      if (data && data.length > 0) {
+        const mapped: DatasetOption[] = data.map((d: any) => ({
+          tableName: getTableNameFromFilename(d.filename || d.name),
+          displayName: d.name || d.filename,
+          totalRows: d.total_rows,
+          totalColumns: d.total_columns,
+        }));
+
+        // Merge with defaults to ensure all exist
+        const all = [...mapped];
+        defaultOptions.forEach((def) => {
+          if (!all.some((item) => item.tableName === def.tableName)) {
+            all.push(def);
+          }
+        });
+        setDatasetsList(all);
+      } else {
+        setDatasetsList(defaultOptions);
+      }
+    } catch (err) {
+      console.error('Error in loadDatasets:', err);
     }
-    return sortDir === 'asc'
-      ? String(aVal).localeCompare(String(bVal))
-      : String(bVal).localeCompare(String(aVal));
-  });
+  };
+
+  useEffect(() => {
+    loadDatasets();
+  }, []);
+
+  const fetchData = async (tableName: string) => {
+    if (!tableName) return;
+    setLoading(true);
+    setErrorMsg(null);
+    try {
+      // Query table directly from Supabase via anon key (15 registros)
+      const { data, error } = await supabase
+        .from(tableName)
+        .select('*')
+        .limit(15);
+
+      if (error) {
+        console.error('Error fetching data directly from Supabase:', error);
+        setErrorMsg(error.message || 'Error al consultar la tabla en Supabase.');
+        setDataRows([]);
+      } else if (data) {
+        setDataRows(data);
+        if (data.length > 0) {
+          const cols = Object.keys(data[0]);
+          if (!selectedColumn || !cols.includes(selectedColumn)) {
+            setSelectedColumn(cols[0]);
+          }
+          if (!sortCol || !cols.includes(sortCol)) {
+            setSortCol(cols[0]);
+          }
+        }
+      }
+    } catch (err: any) {
+      console.error(err);
+      setErrorMsg(err.message || 'Error inesperado al conectar con Supabase.');
+      setDataRows([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData(selectedDataset);
+  }, [selectedDataset]);
+
+  const sortedRows = useMemo(() => {
+    const list = [...dataRows].sort((a, b) => {
+      if (!sortCol) return 0;
+      const aVal = a[sortCol];
+      const bVal = b[sortCol];
+      if (typeof aVal === 'number' && typeof bVal === 'number') {
+        return sortDir === 'asc' ? aVal - bVal : bVal - aVal;
+      }
+      return sortDir === 'asc'
+        ? String(aVal ?? '').localeCompare(String(bVal ?? ''))
+        : String(bVal ?? '').localeCompare(String(aVal ?? ''));
+    });
+    return list.slice(0, 15);
+  }, [dataRows, sortCol, sortDir]);
 
   const handleSort = (col: string) => {
     if (sortCol === col) {
@@ -103,52 +195,187 @@ export default function ObservacionDatos() {
     }
   };
 
-  const handleSendChat = () => {
+  // Column analytics calculations
+  const columnStats = useMemo(() => {
+    if (!selectedColumn || dataRows.length === 0) return null;
+    const values = dataRows.map((r) => r[selectedColumn]);
+    const validValues = values.filter((v) => v !== null && v !== undefined && v !== '');
+    const validPercent = Math.round((validValues.length / values.length) * 100);
+    const uniqueValues = Array.from(new Set(validValues));
+
+    const numericValues = validValues
+      .map((v) => Number(v))
+      .filter((v) => !isNaN(v));
+    const isNumeric = numericValues.length === validValues.length && validValues.length > 0;
+
+    let min = 0;
+    let max = 0;
+    let avg = 0;
+    if (isNumeric) {
+      min = Math.min(...numericValues);
+      max = Math.max(...numericValues);
+      avg = Math.round((numericValues.reduce((a, b) => a + b, 0) / numericValues.length) * 100) / 100;
+    }
+
+    // Top categories for distribution
+    const counts: Record<string, number> = {};
+    validValues.forEach((v) => {
+      const key = String(v);
+      counts[key] = (counts[key] || 0) + 1;
+    });
+    const sortedCategories = Object.entries(counts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5);
+
+    return {
+      total: values.length,
+      validPercent,
+      uniqueCount: uniqueValues.length,
+      nullCount: values.length - validValues.length,
+      isNumeric,
+      min,
+      max,
+      avg,
+      topCategories: sortedCategories,
+    };
+  }, [selectedColumn, dataRows]);
+
+  const handleSendChat = async () => {
     if (!chatInput.trim()) return;
+    const userText = chatInput;
     const userMsg: ChatMessage = {
       id: Date.now().toString(),
       sender: 'user',
-      text: chatInput,
+      text: userText,
     };
     setMessages((prev) => [...prev, userMsg]);
     setChatInput('');
 
-    // Simulated bot response
-    setTimeout(() => {
-      const botMsg: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        sender: 'bot',
-        text: 'He procesado tu solicitud. Los resultados se actualizaron en la tabla principal. ¿Necesitas algún análisis adicional sobre estas métricas?',
-      };
-      setMessages((prev) => [...prev, botMsg]);
-    }, 1200);
+    try {
+      const response = await fetch('http://localhost:8000/api/v1/analytics/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          table_name: selectedDataset,
+          question: userText,
+        }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        const botMsg: ChatMessage = {
+          id: (Date.now() + 1).toString(),
+          sender: 'bot',
+          text: result.explanation || 'Análisis completado.',
+        };
+        setMessages((prev) => [...prev, botMsg]);
+        if (result.data && result.data.length > 0) {
+          setDataRows(result.data.slice(0, 15));
+        }
+        return;
+      }
+    } catch {
+      // Backend not responding or error - fallback to local analysis from Supabase dataRows
+    }
+
+    // Client-side smart assistant fallback
+    let reply = `He analizado la tabla actual "${selectedDataset}" con ${dataRows.length} registros cargados directamente desde Supabase.`;
+    const qLower = userText.toLowerCase();
+
+    if (qLower.includes('filas') || qLower.includes('registros') || qLower.includes('cuant')) {
+      reply += `\nActualmente hay ${dataRows.length} filas en la vista previa.`;
+    } else if (qLower.includes('columna') || qLower.includes('campos')) {
+      const cols = dataRows.length > 0 ? Object.keys(dataRows[0]) : [];
+      reply += `\nLas columnas disponibles son: ${cols.join(', ')}.`;
+    } else if (columnStats) {
+      reply += `\nSobre la columna seleccionada "${selectedColumn}":\n- Registros válidos: ${columnStats.validPercent}%\n- Valores únicos: ${columnStats.uniqueCount}\n${
+        columnStats.isNumeric ? `- Promedio: ${columnStats.avg} (Mín: ${columnStats.min}, Máx: ${columnStats.max})` : ''
+      }`;
+    }
+
+    const botMsg: ChatMessage = {
+      id: (Date.now() + 1).toString(),
+      sender: 'bot',
+      text: reply,
+    };
+    setMessages((prev) => [...prev, botMsg]);
   };
 
-  // Stats for selected column
-  const revenues = simulatedRows.map((r) => r.revenue_usd);
-  const minVal = Math.min(...revenues);
-  const maxVal = Math.max(...revenues);
-  const avgVal = revenues.reduce((a, b) => a + b, 0) / revenues.length;
-
-  const columns = ['transaction_id', 'store_code', 'revenue_usd', 'date', 'category', 'units', 'discount_pct'];
+  const columns = dataRows.length > 0 ? Object.keys(dataRows[0]) : [];
 
   return (
     <>
-      {/* Top bar */}
+      {/* Top Bar */}
       <div className="obs-topbar">
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          <label style={{ fontSize: 11, color: 'var(--text-secondary)', fontStyle: 'italic' }}>Selector de Dataset</label>
-          <select
-            className="obs-dataset-select"
-            value={selectedDataset}
-            onChange={(e) => setSelectedDataset(e.target.value)}
-          >
-            {datasets.map((d) => (
-              <option key={d} value={d}>{d}</option>
-            ))}
-          </select>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Database size={13} style={{ color: 'var(--accent-primary, #3b82f6)' }} />
+            <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)' }}>
+              Dataset de Supabase
+            </label>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            {!isManualInput ? (
+              <select
+                className="obs-dataset-select"
+                value={selectedDataset}
+                onChange={(e) => {
+                  setSelectedDataset(e.target.value);
+                  localStorage.setItem('lastUploadedTable', e.target.value);
+                }}
+                style={{ minWidth: 260 }}
+              >
+                {datasetsList.map((ds) => (
+                  <option key={ds.tableName} value={ds.tableName}>
+                    {ds.displayName} ({ds.tableName}) {ds.totalRows ? `• ${ds.totalRows} filas` : ''}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input
+                className="obs-dataset-select"
+                value={selectedDataset}
+                onChange={(e) => setSelectedDataset(e.target.value)}
+                onBlur={() => {
+                  localStorage.setItem('lastUploadedTable', selectedDataset);
+                  fetchData(selectedDataset);
+                }}
+                placeholder="Ej. dataset_train"
+                style={{ minWidth: 260 }}
+              />
+            )}
+
+            <button
+              className="btn-filter"
+              style={{ padding: '7px 10px' }}
+              title={isManualInput ? 'Elegir de lista' : 'Escribir nombre manual'}
+              onClick={() => setIsManualInput(!isManualInput)}
+            >
+              <Edit3 size={13} />
+            </button>
+
+            <button
+              className="btn-filter"
+              style={{ padding: '7px 10px' }}
+              title="Recargar datos de Supabase"
+              onClick={() => {
+                loadDatasets();
+                fetchData(selectedDataset);
+              }}
+            >
+              <RefreshCw size={13} className={loading ? 'spin' : ''} />
+            </button>
+          </div>
         </div>
-        <span className="obs-info-badge">1.4M Rows • 24 Columns</span>
+
+        <span className="obs-info-badge" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <CheckCircle2 size={13} style={{ color: '#10b981' }} />
+          <span>{sortedRows.length} Registros (Directo Supabase)</span>
+        </span>
+
         <div className="obs-actions">
           <button className="btn-filter">
             <Filter size={14} /> Filtrar
@@ -159,14 +386,14 @@ export default function ObservacionDatos() {
         </div>
       </div>
 
-      {/* 3 Column Layout */}
+      {/* 3-Column Layout */}
       <div className="obs-layout">
         {/* Left: Column Analysis */}
         <div className="col-analysis">
           <h3 className="col-analysis-title">Análisis de Columna</h3>
-          <p className="col-analysis-sub">Selecciona una columna en la tabla para ver métricas.</p>
+          <p className="col-analysis-sub">Selecciona una columna para inspeccionar métricas.</p>
 
-          <div style={{ marginBottom: 12 }}>
+          <div style={{ marginBottom: 14 }}>
             <select
               className="obs-dataset-select"
               value={selectedColumn}
@@ -174,106 +401,149 @@ export default function ObservacionDatos() {
               style={{ width: '100%', fontSize: 12 }}
             >
               {columns.map((c) => (
-                <option key={c} value={c}># {c}</option>
+                <option key={c} value={c}>
+                  # {c}
+                </option>
               ))}
             </select>
           </div>
 
-          <div className="col-selected">
-            <div className="col-selected-name"># {selectedColumn}</div>
-            <div className="col-selected-badges">
-              <span className="col-badge col-badge-type">
-                {selectedColumn === 'revenue_usd' || selectedColumn === 'units' || selectedColumn === 'discount_pct' ? 'NUMERIC' : 'STRING'}
-              </span>
-              <span className="col-badge col-badge-valid">100% VALID</span>
-            </div>
-          </div>
-
-          {(selectedColumn === 'revenue_usd' || selectedColumn === 'units' || selectedColumn === 'discount_pct') && (
+          {selectedColumn && columnStats && (
             <>
+              <div className="col-selected">
+                <div className="col-selected-name"># {selectedColumn}</div>
+                <div className="col-selected-badges">
+                  <span className="col-badge col-badge-valid">
+                    {columnStats.validPercent}% VÁLIDO
+                  </span>
+                  <span className="col-badge col-badge-type">
+                    {columnStats.isNumeric ? 'NUMÉRICO' : 'TEXTO'}
+                  </span>
+                </div>
+              </div>
+
               <div className="col-stats">
                 <div className="col-stat">
-                  <div className="col-stat-label">Mínimo</div>
-                  <div className="col-stat-value">${minVal.toFixed(2)}</div>
+                  <div className="col-stat-label">ÚNICOS</div>
+                  <div className="col-stat-value">{columnStats.uniqueCount}</div>
                 </div>
                 <div className="col-stat">
-                  <div className="col-stat-label">Máximo</div>
-                  <div className="col-stat-value">${maxVal.toFixed(2)}</div>
+                  <div className="col-stat-label">NULOS</div>
+                  <div className="col-stat-value">{columnStats.nullCount}</div>
                 </div>
-                <div className="col-stat">
-                  <div className="col-stat-label">Promedio</div>
-                  <div className="col-stat-value">${avgVal.toFixed(2)}</div>
-                </div>
-                <div className="col-stat">
-                  <div className="col-stat-label">Valores Nulos</div>
-                  <div className="col-stat-value">0</div>
-                </div>
+                {columnStats.isNumeric && (
+                  <>
+                    <div className="col-stat">
+                      <div className="col-stat-label">PROMEDIO</div>
+                      <div className="col-stat-value">{columnStats.avg}</div>
+                    </div>
+                    <div className="col-stat">
+                      <div className="col-stat-label">MÍN / MÁX</div>
+                      <div className="col-stat-value" style={{ fontSize: 11 }}>
+                        {columnStats.min} / {columnStats.max}
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
 
-              <div className="col-distribution">
-                <div className="col-dist-title">Distribución</div>
-                <div className="col-dist-bars">
-                  {distributionBars.map((bar, i) => (
-                    <div
-                      key={i}
-                      className="col-dist-bar"
-                      style={{ height: `${bar.height}%`, background: bar.color }}
-                      title={`Bin ${i + 1}`}
-                    />
-                  ))}
+              {columnStats.topCategories.length > 0 && (
+                <div className="col-distribution">
+                  <div className="col-dist-title">Valores Frecuentes</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {columnStats.topCategories.map(([val, cnt]) => {
+                      const pct = Math.round((cnt / columnStats.total) * 100);
+                      return (
+                        <div key={val} style={{ fontSize: 11 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
+                            <span style={{ color: 'var(--text-primary)', maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {val || '(vacío)'}
+                            </span>
+                            <span style={{ color: 'var(--text-secondary)' }}>
+                              {cnt} ({pct}%)
+                            </span>
+                          </div>
+                          <div style={{ width: '100%', height: 4, background: 'var(--border)', borderRadius: 2, overflow: 'hidden' }}>
+                            <div style={{ width: `${pct}%`, height: '100%', background: 'var(--accent-primary, #3b82f6)' }} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
+              )}
             </>
           )}
         </div>
 
         {/* Center: Data Table */}
-        <div className="data-table-container">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th style={{ width: 30 }}>#</th>
-                {['transaction_id', 'store_code', 'revenue_usd', 'date'].map((col) => (
-                  <th
-                    key={col}
-                    className={sortCol === col ? 'sorted' : ''}
-                    onClick={() => handleSort(col)}
-                  >
-                    {col}
-                    {sortCol === col && (
-                      <ArrowDown
-                        size={12}
-                        style={{
-                          marginLeft: 4,
-                          transform: sortDir === 'asc' ? 'rotate(180deg)' : 'none',
-                          transition: 'transform 0.2s ease',
-                        }}
-                      />
-                    )}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {sortedRows.map((row) => (
-                <tr key={row.rowNum}>
-                  <td className="row-num">{row.rowNum}</td>
-                  <td>{row.transaction_id}</td>
-                  <td>{row.store_code}</td>
-                  <td className={row.revenue_usd > 1000 ? 'cell-highlight' : ''}>
-                    ${row.revenue_usd.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                  </td>
-                  <td>{row.date}</td>
+        <div className="data-table-container" style={{ overflowX: 'auto' }}>
+          {loading ? (
+            <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-secondary)' }}>
+              <RefreshCw size={24} className="spin" style={{ marginBottom: 8 }} />
+              <div>Consultando tabla "{selectedDataset}" en Supabase...</div>
+            </div>
+          ) : errorMsg ? (
+            <div style={{ padding: 30, display: 'flex', alignItems: 'center', gap: 12, color: '#dc2626' }}>
+              <AlertCircle size={24} />
+              <div>
+                <strong style={{ display: 'block', marginBottom: 4 }}>Error al cargar desde Supabase:</strong>
+                <span style={{ fontSize: 13 }}>{errorMsg}</span>
+              </div>
+            </div>
+          ) : dataRows.length === 0 ? (
+            <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-secondary)' }}>
+              <Database size={32} style={{ marginBottom: 10, opacity: 0.5 }} />
+              <p>No hay datos disponibles en la tabla <strong>{selectedDataset}</strong> en Supabase.</p>
+              <p style={{ fontSize: 12, marginTop: 6 }}>Verifica haber subido el archivo o selecciona otro dataset.</p>
+            </div>
+          ) : (
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th style={{ width: 40, textAlign: 'center' }}>#</th>
+                  {columns.map((col) => (
+                    <th
+                      key={col}
+                      className={sortCol === col ? 'sorted' : ''}
+                      onClick={() => handleSort(col)}
+                      style={{ cursor: 'pointer', whiteSpace: 'nowrap' }}
+                    >
+                      {col}
+                      {sortCol === col && (
+                        <ArrowDown
+                          size={12}
+                          style={{
+                            marginLeft: 4,
+                            transform: sortDir === 'asc' ? 'rotate(180deg)' : 'none',
+                            transition: 'transform 0.2s ease',
+                          }}
+                        />
+                      )}
+                    </th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {sortedRows.map((row, idx) => (
+                  <tr key={row.id ?? idx}>
+                    <td className="row-num" style={{ textAlign: 'center' }}>{idx + 1}</td>
+                    {columns.map((col) => (
+                      <td key={col} style={{ whiteSpace: 'nowrap', maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {row[col] !== null && row[col] !== undefined ? String(row[col]) : <em style={{ opacity: 0.4 }}>null</em>}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
 
         {/* Right: AI Assistant */}
         <div className="ai-chat">
           <div className="ai-chat-header">
-            <span className="ai-chat-title">Asistente AI</span>
+            <span className="ai-chat-title">Asistente AI Gemini</span>
             <button className="topbar-icon-btn" style={{ width: 28, height: 28, border: 'none' }}>
               <MoreHorizontal size={14} />
             </button>
@@ -293,7 +563,7 @@ export default function ObservacionDatos() {
           <div className="ai-chat-input">
             <input
               type="text"
-              placeholder="Pregunta sobre los datos..."
+              placeholder="Ej. 'Muestra las ventas mayores a 1000'"
               value={chatInput}
               onChange={(e) => setChatInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSendChat()}

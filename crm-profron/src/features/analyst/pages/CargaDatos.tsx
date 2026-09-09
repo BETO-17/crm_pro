@@ -1,4 +1,5 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Upload,
   FileText,
@@ -10,6 +11,7 @@ import {
   Home,
   ChevronRight,
   AlertCircle,
+  ArrowRight,
 } from 'lucide-react';
 
 type FileStatus = 'ready' | 'validating' | 'error';
@@ -21,30 +23,87 @@ interface QueueFile {
   type: string;
   status: FileStatus;
   icon: 'csv' | 'xlsx';
+  fileObj?: File;
 }
 
-const initialFiles: QueueFile[] = [
-  { id: '1', name: 'ventas_q3_retail.csv', size: '12.4 MB', type: 'CSV Document', status: 'ready', icon: 'csv' },
-  { id: '2', name: 'inventario_historico.xlsx', size: '45.1 MB', type: 'Excel Spreadsheet', status: 'validating', icon: 'xlsx' },
-  { id: '3', name: 'clientes_db_corrupt.csv', size: '2.1 MB', type: 'CSV Document', status: 'error', icon: 'csv' },
+export interface PersistentDataset {
+  id: string;
+  name: string;
+  tableName: string;
+  rows: number;
+  columnsCount?: number;
+  sector: string;
+  uploadedAt: string;
+}
+
+const defaultDatasets: PersistentDataset[] = [
+  {
+    id: 'ds-1',
+    name: 'ventas_tecnologia_limpio.csv',
+    tableName: 'dataset_ventas_tecnologia_limpio',
+    rows: 1813,
+    columnsCount: 8,
+    sector: 'Tecnología',
+    uploadedAt: 'Reciente',
+  },
+  {
+    id: 'ds-2',
+    name: 'ventas_tienda_tech_4000.csv',
+    tableName: 'dataset_ventas_tienda_tech_4000',
+    rows: 4000,
+    columnsCount: 10,
+    sector: 'Retail',
+    uploadedAt: 'Reciente',
+  },
+  {
+    id: 'ds-3',
+    name: 'fetch_california_housing.csv',
+    tableName: 'dataset_fetch_california_housing',
+    rows: 20640,
+    columnsCount: 9,
+    sector: 'General',
+    uploadedAt: 'Reciente',
+  },
 ];
 
 const sectors = ['Retail', 'Tecnología', 'Logística', 'Finanzas', 'Salud', 'E-Commerce'];
 
 export default function CargaDatos() {
-  const [files, setFiles] = useState<QueueFile[]>(initialFiles);
+  const navigate = useNavigate();
+  const [files, setFiles] = useState<QueueFile[]>([]);
   const [sector, setSector] = useState('');
   const [dragOver, setDragOver] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
   const [saving, setSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Persistent uploaded datasets
+  const [savedDatasets, setSavedDatasets] = useState<PersistentDataset[]>(() => {
+    try {
+      const stored = localStorage.getItem('analyst_saved_datasets');
+      if (stored) {
+        return JSON.parse(stored);
+      }
+    } catch {
+      // fallback
+    }
+    return defaultDatasets;
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('analyst_saved_datasets', JSON.stringify(savedDatasets));
+    } catch {
+      // ignore
+    }
+  }, [savedDatasets]);
+
   const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3000);
   };
 
-  const addFile = (name: string, sizeMB: number) => {
+  const addFile = (name: string, sizeMB: number, fileObj?: File) => {
     const ext = name.split('.').pop()?.toLowerCase();
     const isCSV = ext === 'csv';
     const newFile: QueueFile = {
@@ -52,22 +111,12 @@ export default function CargaDatos() {
       name,
       size: `${sizeMB.toFixed(1)} MB`,
       type: isCSV ? 'CSV Document' : 'Excel Spreadsheet',
-      status: 'validating',
+      status: 'ready',
       icon: isCSV ? 'csv' : 'xlsx',
+      fileObj,
     };
     setFiles((prev) => [...prev, newFile]);
     showToast(`"${name}" añadido a la cola`);
-
-    // Simulate validation
-    setTimeout(() => {
-      setFiles((prev) =>
-        prev.map((f) =>
-          f.id === newFile.id
-            ? { ...f, status: Math.random() > 0.3 ? 'ready' : 'error' }
-            : f
-        )
-      );
-    }, 2000 + Math.random() * 2000);
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -75,27 +124,16 @@ export default function CargaDatos() {
     setDragOver(false);
     const droppedFiles = Array.from(e.dataTransfer.files);
     droppedFiles.forEach((file) => {
-      addFile(file.name, file.size / (1024 * 1024));
+      addFile(file.name, file.size / (1024 * 1024), file);
     });
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = Array.from(e.target.files || []);
     selected.forEach((file) => {
-      addFile(file.name, file.size / (1024 * 1024));
+      addFile(file.name, file.size / (1024 * 1024), file);
     });
     if (fileInputRef.current) fileInputRef.current.value = '';
-  };
-
-  const handleSimulatedUpload = () => {
-    const names = [
-      'metricas_ventas_2024.csv',
-      'stock_regional_norte.xlsx',
-      'precios_competencia.csv',
-      'forecast_q4.xlsx',
-    ];
-    const name = names[files.length % names.length];
-    addFile(name, 5 + Math.random() * 40);
   };
 
   const removeFile = (id: string) => {
@@ -104,22 +142,74 @@ export default function CargaDatos() {
     showToast(`"${file?.name}" removido`, 'info');
   };
 
-  const handleSave = () => {
-    const readyFiles = files.filter((f) => f.status === 'ready');
+  const handleSave = async () => {
+    const readyFiles = files.filter((f) => f.status === 'ready' && f.fileObj);
     if (readyFiles.length === 0) {
-      showToast('No hay archivos listos para guardar', 'error');
+      showToast('No hay archivos reales listos para guardar', 'error');
       return;
     }
-    if (!sector) {
-      showToast('Selecciona un sector de destino', 'error');
-      return;
-    }
+    const finalSector = sector || 'General';
     setSaving(true);
-    setTimeout(() => {
+    
+    try {
+      const newlySaved: PersistentDataset[] = [];
+
+      for (const file of readyFiles) {
+        const formData = new FormData();
+        formData.append('file', file.fileObj as Blob);
+        formData.append('sector', finalSector);
+        
+        const token = localStorage.getItem('token');
+        const response = await fetch('http://localhost:8000/api/v1/datasets/upload', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          },
+          body: formData,
+        });
+        
+        if (!response.ok) {
+          throw new Error('Error en carga');
+        }
+        
+        const data = await response.json();
+        // Guardamos la última tabla subida para preseleccionarla en la vista de observación
+        localStorage.setItem('lastUploadedTable', data.table_name);
+
+        newlySaved.push({
+          id: `ds-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+          name: file.name,
+          tableName: data.table_name,
+          rows: data.rows || 0,
+          columnsCount: data.columns ? data.columns.length : 0,
+          sector: finalSector,
+          uploadedAt: 'Hace un momento',
+        });
+      }
+      
+      // Actualizamos los datasets guardados de forma persistente
+      setSavedDatasets((prev) => {
+        const filtered = prev.filter((p) => !newlySaved.some((n) => n.tableName === p.tableName));
+        return [...newlySaved, ...filtered];
+      });
+
+      setFiles((prev) => prev.filter((f) => !readyFiles.includes(f)));
+      showToast(`${readyFiles.length} archivo(s) procesados y guardados en base de datos ✓`);
+    } catch (error) {
+      showToast('Ocurrió un error al subir los archivos', 'error');
+    } finally {
       setSaving(false);
-      setFiles((prev) => prev.filter((f) => f.status !== 'ready'));
-      showToast(`${readyFiles.length} archivo(s) guardados en base de datos ✓`);
-    }, 1500);
+    }
+  };
+
+  const handleGoToObservation = (tableName: string) => {
+    localStorage.setItem('lastUploadedTable', tableName);
+    navigate('/analyst/observacion');
+  };
+
+  const handleDeleteSaved = (id: string) => {
+    setSavedDatasets((prev) => prev.filter((d) => d.id !== id));
+    showToast('Dataset removido de la vista', 'info');
   };
 
   const readyCount = files.filter((f) => f.status === 'ready').length;
@@ -156,7 +246,11 @@ export default function CargaDatos() {
         </div>
         <div className="stat-chip">
           <span className="stat-chip-number" style={{ color: '#22c55e' }}>{readyCount}</span>
-          <span className="stat-chip-label">Listos</span>
+          <span className="stat-chip-label">Listos para subir</span>
+        </div>
+        <div className="stat-chip">
+          <span className="stat-chip-number" style={{ color: '#3b82f6' }}>{savedDatasets.length}</span>
+          <span className="stat-chip-label">En Base de Datos</span>
         </div>
         {errorCount > 0 && (
           <div className="stat-chip">
@@ -209,13 +303,6 @@ export default function CargaDatos() {
             <span className="dropzone-badge">.XLSX</span>
           </div>
           <div className="dropzone-limit">Tamaño máximo: 500MB por archivo</div>
-        </div>
-
-        {/* Simulate button */}
-        <div style={{ textAlign: 'center', marginBottom: 24 }}>
-          <button className="btn-filter" onClick={handleSimulatedUpload} style={{ display: 'inline-flex' }}>
-            <Upload size={14} /> Simular carga de archivo
-          </button>
         </div>
 
         {/* File Queue */}
@@ -276,11 +363,69 @@ export default function CargaDatos() {
           <button
             className={`btn-save-db ${saving ? 'btn-saving' : ''}`}
             onClick={handleSave}
-            disabled={saving}
+            disabled={saving || readyCount === 0}
           >
             <Database size={14} />
-            {saving ? 'Guardando...' : 'Guardar en Base de Datos'}
+            {saving ? 'Guardando en Base de Datos...' : 'Guardar en Base de Datos'}
           </button>
+        </div>
+      </div>
+
+      {/* Persistent Uploaded Datasets Cards */}
+      <div className="persisted-datasets-section">
+        <div className="persisted-datasets-header">
+          <div>
+            <h2 className="persisted-datasets-title">Datasets Subidos y Persistentes</h2>
+            <p className="persisted-datasets-sub">Archivos CSV procesados y persistidos en la base de datos Supabase.</p>
+          </div>
+          <span className="obs-info-badge">{savedDatasets.length} Registrados</span>
+        </div>
+
+        <div className="persisted-datasets-grid">
+          {savedDatasets.map((ds) => (
+            <div key={ds.id} className="persisted-dataset-card">
+              <div className="persisted-dataset-card-top">
+                <div className="persisted-dataset-icon">
+                  <FileText size={18} />
+                </div>
+                <span className="persisted-dataset-badge">
+                  <CheckCircle size={12} style={{ marginRight: 4 }} /> En Base de Datos
+                </span>
+              </div>
+              <h3 className="persisted-dataset-name" title={ds.name}>{ds.name}</h3>
+              <div className="persisted-dataset-table-tag">
+                <code>{ds.tableName}</code>
+              </div>
+              <div className="persisted-dataset-meta">
+                <span className="persisted-dataset-meta-item">
+                  <strong>{ds.rows.toLocaleString()}</strong> filas
+                </span>
+                {ds.columnsCount ? (
+                  <span className="persisted-dataset-meta-item">
+                    <strong>{ds.columnsCount}</strong> columnas
+                  </span>
+                ) : null}
+                <span className="persisted-dataset-meta-tag">{ds.sector}</span>
+              </div>
+              <div className="persisted-dataset-footer">
+                <button
+                  className="btn-persisted-explore"
+                  onClick={() => handleGoToObservation(ds.tableName)}
+                  title="Abrir en Observación de Datos"
+                >
+                  Observar Datos <ArrowRight size={13} />
+                </button>
+                <button
+                  className="btn-persisted-delete"
+                  onClick={() => handleDeleteSaved(ds.id)}
+                  title="Quitar de la lista"
+                  aria-label="Quitar de la lista"
+                >
+                  <Trash2 size={13} />
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </>

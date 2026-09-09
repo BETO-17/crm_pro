@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   UserPlus,
   Settings,
@@ -68,15 +68,11 @@ const iconMap = {
   file: FileSpreadsheet,
 };
 
-const mockUsers: CreatedUser[] = [
-  { id: '1', nombre: 'Carlos Ruiz', correo: 'carlos.ruiz@retail.com', fecha: 'Hace 2 días' },
-  { id: '2', nombre: 'Laura Mendoza', correo: 'laura.m@retail.com', fecha: 'Hace 5 días' },
-  { id: '3', nombre: 'Miguel Torres', correo: 'miguel.t@retail.com', fecha: 'Hace 1 semana' },
-];
+
 
 export default function GestionUsuarios() {
   const [modules, setModules] = useState(initialModules);
-  const [users, setUsers] = useState<CreatedUser[]>(mockUsers);
+  const [users, setUsers] = useState<CreatedUser[]>([]);
   const [formData, setFormData] = useState({
     nombre: '',
     correo: '',
@@ -90,6 +86,42 @@ export default function GestionUsuarios() {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3000);
   };
+
+  const getHeaders = useCallback(() => {
+    const token = localStorage.getItem('token');
+    return {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    };
+  }, []);
+
+  const fetchUsers = useCallback(async () => {
+    try {
+      const res = await fetch('http://localhost:8000/api/v1/users/', {
+        headers: getHeaders()
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const mappedUsers: CreatedUser[] = data.map((u: Record<string, unknown>) => {
+          return {
+            id: String(u.id),
+            nombre: (u.full_name as string) || 'Sin nombre',
+            correo: u.email as string,
+            fecha: 'Registrado',
+          };
+        });
+        // Mostrar primero los más recientes
+        setUsers(mappedUsers.reverse());
+      }
+    } catch {
+      showToast('Error al cargar usuarios', 'error');
+    }
+  }, [getHeaders]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchUsers();
+  }, [fetchUsers]);
 
   const toggleModule = (id: string) => {
     setModules((prev) =>
@@ -107,27 +139,58 @@ export default function GestionUsuarios() {
     );
   };
 
-  const handleCreateUser = (e: React.FormEvent) => {
+  const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.nombre.trim() || !formData.correo.trim()) {
-      showToast('Por favor completa nombre y correo', 'error');
+    if (!formData.nombre.trim() || !formData.correo.trim() || !formData.password.trim()) {
+      showToast('Por favor completa nombre, correo y contraseña', 'error');
       return;
     }
-    const newUser: CreatedUser = {
-      id: Date.now().toString(),
-      nombre: formData.nombre,
-      correo: formData.correo,
-      fecha: 'Ahora mismo',
-    };
-    setUsers((prev) => [newUser, ...prev]);
-    setFormData({ nombre: '', correo: '', password: '', otp: '' });
-    showToast(`Usuario "${formData.nombre}" creado exitosamente ✓`);
+
+    try {
+      const res = await fetch('http://localhost:8000/api/v1/users/', {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({
+          email: formData.correo.trim(),
+          full_name: formData.nombre.trim(),
+          password: formData.password.trim(),
+          role: 'analyst', // Rol por defecto
+          is_active: true,
+          status: 'offline'
+        })
+      });
+
+      if (res.ok) {
+        showToast(`Usuario "${formData.nombre}" creado exitosamente ✓`);
+        setFormData({ nombre: '', correo: '', password: '', otp: '' });
+        fetchUsers(); // Recargar lista
+      } else {
+        const err = await res.json();
+        showToast(err.detail || 'Error al crear usuario', 'error');
+      }
+    } catch {
+      showToast('Error de red', 'error');
+    }
   };
 
-  const handleDeleteUser = (id: string) => {
-    const user = users.find((u) => u.id === id);
-    setUsers((prev) => prev.filter((u) => u.id !== id));
-    showToast(`Usuario "${user?.nombre}" eliminado`, 'info');
+  const handleDeleteUser = async (id: string) => {
+    if (window.confirm('¿Estás seguro de que deseas eliminar este usuario?')) {
+      try {
+        const res = await fetch(`http://localhost:8000/api/v1/users/${id}`, {
+          method: 'DELETE',
+          headers: getHeaders()
+        });
+        
+        if (res.ok) {
+          setUsers((prev) => prev.filter((u) => u.id !== id));
+          showToast('Usuario eliminado', 'info');
+        } else {
+          showToast('Error al eliminar usuario', 'error');
+        }
+      } catch {
+        showToast('Error de red', 'error');
+      }
+    }
   };
 
   const activeCount = modules.filter((m) => m.status === 'Activo').length;

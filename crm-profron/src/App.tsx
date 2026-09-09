@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import ProtectedRoute from './components/ProtectedRoute';
 import {
   Bell,
   Settings,
@@ -26,79 +28,71 @@ import Informes from './features/analyst/pages/Informes';
 import './features/admin/admin.css';
 import './features/analyst/analyst.css';
 
-type AppRole = 'landing' | 'admin' | 'analyst';
-type AdminView = 'dashboard' | 'usuarios' | 'tendencias' | 'reportes';
-type AnalystView = 'perfil' | 'carga' | 'observacion' | 'comparacion' | 'workspace' | 'informes';
-
 /** Sub-views within the Usuarios tab */
 type UsuariosSubView = 'gestion' | 'asignacion' | 'workspaces';
 
 function App() {
-  const [role, setRole] = useState<AppRole>('landing');
-  const [activeView, setActiveView] = useState<AdminView>('usuarios');
-  const [analystView, setAnalystView] = useState<AnalystView>('perfil');
+  const navigate = useNavigate();
+  const location = useLocation();
   const [usuariosSubView, setUsuariosSubView] = useState<UsuariosSubView>('gestion');
 
-  const handleNavigate = (view: string) => {
-    setActiveView(view as AdminView);
-    if (view === 'usuarios') {
-      setUsuariosSubView('gestion');
-    }
-  };
-
-  const handleAnalystNavigate = (view: string) => {
-    setAnalystView(view as AnalystView);
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    navigate('/');
   };
 
   /* ===== ADMIN TOP BAR ===== */
   const renderAdminTopBar = () => {
-    switch (activeView) {
-      case 'dashboard':
-      case 'usuarios':
-        return (
-          <>
-            <div className="topbar-left">
-              <span className="topbar-title">analytics RetailMetrics 360</span>
-              {activeView === 'usuarios' && (
-                <div className="topbar-tabs">
-                  <button
-                    className={`topbar-tab ${usuariosSubView === 'gestion' ? 'active' : ''}`}
-                    onClick={() => setUsuariosSubView('gestion')}
-                  >
-                    Gestión
-                  </button>
-                  <button
-                    className={`topbar-tab ${usuariosSubView === 'asignacion' ? 'active' : ''}`}
-                    onClick={() => setUsuariosSubView('asignacion')}
-                  >
-                    Asignación
-                  </button>
-                  <button
-                    className={`topbar-tab ${usuariosSubView === 'workspaces' ? 'active' : ''}`}
-                    onClick={() => setUsuariosSubView('workspaces')}
-                  >
-                    Workspaces
-                  </button>
-                </div>
-              )}
-            </div>
-            <div className="topbar-right">
-              <button className="topbar-icon-btn" aria-label="Notificaciones">
-                <Bell size={16} />
-              </button>
-              <button className="topbar-icon-btn" aria-label="Configuración">
-                <Settings size={16} />
-              </button>
-              <div className="topbar-avatar-small" aria-hidden="true">RA</div>
-              <button className="topbar-logout" onClick={() => setRole('landing')}>
-                <LogOut size={14} />
-                Cerrar Sesión
-              </button>
-            </div>
-          </>
-        );
+    const path = location.pathname;
+    
+    if (path.includes('/admin/dashboard') || path.includes('/admin/usuarios')) {
+      const isUsuarios = path.includes('/admin/usuarios');
+      return (
+        <>
+          <div className="topbar-left">
+            <span className="topbar-title">analytics RetailMetrics 360</span>
+            {isUsuarios && (
+              <div className="topbar-tabs">
+                <button
+                  className={`topbar-tab ${usuariosSubView === 'gestion' ? 'active' : ''}`}
+                  onClick={() => { setUsuariosSubView('gestion'); navigate('/admin/usuarios/gestion'); }}
+                >
+                  Gestión
+                </button>
+                <button
+                  className={`topbar-tab ${usuariosSubView === 'asignacion' ? 'active' : ''}`}
+                  onClick={() => { setUsuariosSubView('asignacion'); navigate('/admin/usuarios/asignacion'); }}
+                >
+                  Asignación
+                </button>
+                <button
+                  className={`topbar-tab ${usuariosSubView === 'workspaces' ? 'active' : ''}`}
+                  onClick={() => { setUsuariosSubView('workspaces'); navigate('/admin/usuarios/workspaces'); }}
+                >
+                  Workspaces
+                </button>
+              </div>
+            )}
+          </div>
+          <div className="topbar-right">
+            <button className="topbar-icon-btn" aria-label="Notificaciones">
+              <Bell size={16} />
+            </button>
+            <button className="topbar-icon-btn" aria-label="Configuración">
+              <Settings size={16} />
+            </button>
+            <div className="topbar-avatar-small" aria-hidden="true">RA</div>
+            <button className="topbar-logout" onClick={handleLogout}>
+              <LogOut size={14} />
+              Cerrar Sesión
+            </button>
+          </div>
+        </>
+      );
+    }
 
-      case 'tendencias':
+    if (path.includes('/admin/tendencias')) {
         return (
           <>
             <div className="topbar-left">
@@ -119,16 +113,17 @@ function App() {
               <button className="topbar-icon-btn" aria-label="Perfil">
                 <UserCircle size={16} />
               </button>
-              <button className="topbar-logout" onClick={() => setRole('landing')}>
+              <button className="topbar-logout" onClick={handleLogout}>
                 <LogOut size={14} />
                 Cerrar Sesión
               </button>
             </div>
           </>
         );
+    }
 
-      case 'reportes':
-        return (
+    if (path.includes('/admin/reportes')) {
+      return (
           <>
             <div className="topbar-left">
               <div className="topbar-search">
@@ -152,17 +147,16 @@ function App() {
                 <Settings size={16} />
               </button>
               <div className="topbar-avatar-small" aria-hidden="true">RA</div>
-              <button className="topbar-logout" onClick={() => setRole('landing')}>
+              <button className="topbar-logout" onClick={handleLogout}>
                 <LogOut size={14} />
                 Cerrar Sesión
               </button>
             </div>
           </>
         );
-
-      default:
-        return null;
     }
+
+    return null;
   };
 
   /* ===== ANALYST TOP BAR ===== */
@@ -174,7 +168,7 @@ function App() {
         </div>
         <div className="topbar-right">
           <div className="topbar-avatar-small" aria-hidden="true">RA</div>
-          <button className="topbar-logout" onClick={() => setRole('landing')}>
+          <button className="topbar-logout" onClick={handleLogout}>
             <LogOut size={14} />
             Cerrar Sesión
           </button>
@@ -185,108 +179,75 @@ function App() {
 
   /** Render sidebar footer based on view */
   const renderSidebarFooter = () => {
-    switch (activeView) {
-      case 'tendencias':
-        return (
-          <button className="sidebar-export-btn">
-            <FileDown size={16} aria-hidden="true" />
-            Export Report
-          </button>
-        );
-      case 'reportes':
-        return (
-          <button className="sidebar-generate-btn">
-            + Generate Report
-          </button>
-        );
-      default:
-        return null;
+    const path = location.pathname;
+    if (path.includes('/admin/tendencias')) {
+      return (
+        <button className="sidebar-export-btn">
+          <FileDown size={16} aria-hidden="true" />
+          Export Report
+        </button>
+      );
     }
-  };
-
-  /** Render admin content */
-  const renderAdminContent = () => {
-    switch (activeView) {
-      case 'dashboard':
-        return (
-          <>
-            <h1 className="page-title">Dashboard</h1>
-            <p className="page-subtitle">Vista general del panel de administración.</p>
-            <div className="admin-panels">
-              <div className="admin-card" style={{ gridColumn: '1 / -1', minHeight: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <p style={{ color: 'var(--text-secondary)', fontSize: 15 }}>
-                  Panel de control principal — Selecciona una sección del menú lateral.
-                </p>
-              </div>
-            </div>
-          </>
-        );
-      case 'usuarios':
-        switch (usuariosSubView) {
-          case 'gestion':
-            return <GestionUsuarios />;
-          case 'asignacion':
-            return <AsignacionModulos />;
-          case 'workspaces':
-            return <Workspaces />;
-          default:
-            return <GestionUsuarios />;
-        }
-      case 'tendencias':
-        return <Tendencias />;
-      case 'reportes':
-        return <CentroReportes />;
-      default:
-        return <GestionUsuarios />;
+    if (path.includes('/admin/reportes')) {
+      return (
+        <button className="sidebar-generate-btn">
+          + Generate Report
+        </button>
+      );
     }
-  };
-
-  /** Render analyst content */
-  const renderAnalystContent = () => {
-    switch (analystView) {
-      case 'perfil':
-        return <PerfilUsuario />;
-      case 'carga':
-        return <CargaDatos />;
-      case 'observacion':
-        return <ObservacionDatos />;
-      case 'comparacion':
-        return <ComparacionAnalisis />;
-      case 'workspace':
-        return <AnalystWorkspaces />;
-      case 'informes':
-        return <Informes />;
-      default:
-        return <PerfilUsuario />;
-    }
+    return null;
   };
 
   /* ===== RENDER ===== */
-  if (role === 'landing') {
-    return <LandingPage onLogin={() => setRole('analyst')} onAdminLogin={() => setRole('admin')} />;
-  }
-
-  if (role === 'analyst') {
-    return (
-      <AnalystLayout
-        activeView={analystView}
-        onNavigate={handleAnalystNavigate}
-        topBar={renderAnalystTopBar()}
-      >
-        {renderAnalystContent()}
-      </AnalystLayout>
-    );
-  }
-
   return (
-    <AdminLayout
-      activeView={activeView}
-      onNavigate={handleNavigate}
-      topBar={renderAdminTopBar()}
-      sidebarFooter={renderSidebarFooter()}
-    >
-      {renderAdminContent()}
-    </AdminLayout>
+    <Routes>
+      <Route path="/" element={<LandingPage />} />
+      
+      {/* Rutas para Analista */}
+      <Route element={<ProtectedRoute allowedRoles={['analyst', 'admin', 'manager']} />}>
+        <Route path="/analyst/*" element={<AnalystLayout topBar={renderAnalystTopBar()} />}>
+          <Route path="perfil" element={<PerfilUsuario />} />
+          <Route path="carga" element={<CargaDatos />} />
+          <Route path="observacion" element={<ObservacionDatos />} />
+          <Route path="comparacion" element={<ComparacionAnalisis />} />
+          <Route path="workspace" element={<AnalystWorkspaces />} />
+          <Route path="informes" element={<Informes />} />
+          <Route path="*" element={<Navigate to="perfil" replace />} />
+        </Route>
+      </Route>
+
+      {/* Rutas para Administrador */}
+      <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
+        <Route path="/admin/*" element={<AdminLayout topBar={renderAdminTopBar()} sidebarFooter={renderSidebarFooter()} />}>
+          <Route path="dashboard" element={
+            <>
+              <h1 className="page-title">Dashboard</h1>
+              <p className="page-subtitle">Vista general del panel de administración.</p>
+              <div className="admin-panels">
+                <div className="admin-card" style={{ gridColumn: '1 / -1', minHeight: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: 15 }}>
+                    Panel de control principal — Selecciona una sección del menú lateral.
+                  </p>
+                </div>
+              </div>
+            </>
+          } />
+          
+          <Route path="usuarios">
+            <Route path="gestion" element={<GestionUsuarios />} />
+            <Route path="asignacion" element={<AsignacionModulos />} />
+            <Route path="workspaces" element={<Workspaces />} />
+            <Route index element={<Navigate to="gestion" replace />} />
+          </Route>
+          
+          <Route path="tendencias" element={<Tendencias />} />
+          <Route path="reportes" element={<CentroReportes />} />
+          <Route path="*" element={<Navigate to="usuarios/gestion" replace />} />
+        </Route>
+      </Route>
+
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
 }
 

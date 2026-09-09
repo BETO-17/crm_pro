@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   UserPlus,
   Search,
@@ -26,86 +26,8 @@ interface UserAssignment {
   status: 'online' | 'offline' | 'away';
 }
 
-const initialUsers: UserAssignment[] = [
-  {
-    id: '1',
-    name: 'Carlos Ruiz',
-    email: 'carlos@retail.com',
-    role: 'Analista',
-    initials: 'CR',
-    color: '#4f8cff',
-    carga: true,
-    analisis: true,
-    tendencias: false,
-    workspace: true,
-    reportes: false,
-    lastLogin: 'Hace 5 min',
-    status: 'online',
-  },
-  {
-    id: '2',
-    name: 'Laura Mendoza',
-    email: 'laura@retail.com',
-    role: 'Gerente',
-    initials: 'LM',
-    color: '#a855f7',
-    carga: false,
-    analisis: true,
-    tendencias: true,
-    workspace: true,
-    reportes: true,
-    lastLogin: 'Hace 1h',
-    status: 'away',
-  },
-  {
-    id: '3',
-    name: 'Miguel Torres',
-    email: 'miguel@retail.com',
-    role: 'Analista',
-    initials: 'MT',
-    color: '#22c55e',
-    carga: true,
-    analisis: false,
-    tendencias: true,
-    workspace: false,
-    reportes: false,
-    lastLogin: 'Hace 3h',
-    status: 'online',
-  },
-  {
-    id: '4',
-    name: 'Ana García',
-    email: 'ana@retail.com',
-    role: 'Gerente',
-    initials: 'AG',
-    color: '#f59e0b',
-    carga: true,
-    analisis: true,
-    tendencias: true,
-    workspace: true,
-    reportes: true,
-    lastLogin: 'Ayer',
-    status: 'offline',
-  },
-  {
-    id: '5',
-    name: 'Roberto Díaz',
-    email: 'roberto@retail.com',
-    role: 'Analista',
-    initials: 'RD',
-    color: '#ef4444',
-    carga: false,
-    analisis: false,
-    tendencias: false,
-    workspace: false,
-    reportes: false,
-    lastLogin: 'Hace 2 días',
-    status: 'offline',
-  },
-];
-
 export default function AsignacionModulos() {
-  const [users, setUsers] = useState(initialUsers);
+  const [users, setUsers] = useState<UserAssignment[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
@@ -117,13 +39,75 @@ export default function AsignacionModulos() {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    role: 'Analista',
+    role: 'analyst',
+    password: '',
   });
 
-  const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
+  const showToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'success') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3000);
-  };
+  }, []);
+
+  const getHeaders = useCallback(() => {
+    const token = localStorage.getItem('token');
+    return {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    };
+  }, []);
+
+  const fetchUsers = useCallback(async () => {
+    try {
+      const res = await fetch('http://localhost:8000/api/v1/users/', {
+        headers: getHeaders()
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const colors = ['#4f8cff', '#a855f7', '#22c55e', '#f59e0b', '#ef4444', '#06b6d4'];
+        const mappedUsers: UserAssignment[] = data.map((u: Record<string, unknown>, index: number) => {
+          const preferences = (u.preferences || {}) as Record<string, boolean>;
+          const fullName = u.full_name as string;
+          const email = u.email as string;
+          const role = u.role as string;
+          const status = u.status as string;
+          const id = u.id as string | number;
+          
+          const initials = fullName
+            ? fullName.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()
+            : email.slice(0, 2).toUpperCase();
+            
+          return {
+            id: String(id),
+            name: fullName || 'Sin nombre',
+            email: email,
+            role: role,
+            initials,
+            color: colors[index % colors.length],
+            carga: !!preferences.carga,
+            analisis: !!preferences.analisis,
+            tendencias: !!preferences.tendencias,
+            workspace: !!preferences.workspace,
+            reportes: !!preferences.reportes,
+            lastLogin: 'Desconocido',
+            status: (status as 'online' | 'offline' | 'away') || 'offline',
+          };
+        });
+        setUsers(mappedUsers);
+      }
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      showToast('Error al cargar usuarios', 'error');
+    }
+  }, [getHeaders, showToast]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchUsers();
+  }, [fetchUsers]);
+
+
+
+
 
   const togglePermission = (userId: string, field: 'carga' | 'analisis' | 'tendencias' | 'workspace' | 'reportes') => {
     setUsers((prev) =>
@@ -134,78 +118,128 @@ export default function AsignacionModulos() {
     setHasChanges(true);
   };
 
-  const handleSavePermissions = () => {
+  const handleSavePermissions = async () => {
     setSaving(true);
-    setTimeout(() => {
-      setSaving(false);
+    try {
+      // Create a batch update for all users (or just modify all sequentially since it's an MVP)
+      for (const u of users) {
+        await fetch(`http://localhost:8000/api/v1/users/${u.id}`, {
+          method: 'PUT',
+          headers: getHeaders(),
+          body: JSON.stringify({
+            preferences: {
+              carga: u.carga,
+              analisis: u.analisis,
+              tendencias: u.tendencias,
+              workspace: u.workspace,
+              reportes: u.reportes
+            }
+          })
+        });
+      }
       setHasChanges(false);
       showToast('Permisos actualizados correctamente ✓');
-    }, 800);
+    } catch (error) {
+      console.error('Error saving permissions:', error);
+      showToast('Error al guardar permisos', 'error');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const openCreateModal = () => {
     setEditingUser(null);
-    setFormData({ name: '', email: '', role: 'Analista' });
+    setFormData({ name: '', email: '', role: 'analyst', password: '' });
     setShowModal(true);
   };
 
   const openEditModal = (user: UserAssignment) => {
     setEditingUser(user);
-    setFormData({ name: user.name, email: user.email, role: user.role });
+    setFormData({ name: user.name, email: user.email, role: user.role, password: '' });
     setShowModal(true);
   };
 
-  const handleDeleteUser = (id: string) => {
+  const handleDeleteUser = async (id: string) => {
     if (window.confirm('¿Estás seguro de que deseas eliminar este usuario?')) {
-      setUsers(users.filter(u => u.id !== id));
-      showToast('Usuario eliminado', 'info');
+      try {
+        const res = await fetch(`http://localhost:8000/api/v1/users/${id}`, {
+          method: 'DELETE',
+          headers: getHeaders()
+        });
+        if (res.ok) {
+          setUsers(users.filter(u => u.id !== id));
+          showToast('Usuario eliminado', 'info');
+        } else {
+          showToast('Error al eliminar usuario', 'error');
+        }
+      } catch {
+        showToast('Error de conexión', 'error');
+      }
     }
   };
 
-  const handleSaveUser = (e: React.FormEvent) => {
+  const handleSaveUser = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name.trim() || !formData.email.trim()) {
       showToast('Por favor completa nombre y correo', 'error');
       return;
     }
 
-    const initials = formData.name
-      .split(' ')
-      .map((n) => n[0])
-      .join('')
-      .slice(0, 2)
-      .toUpperCase();
+    try {
+      if (editingUser) {
+        // Update
+        const updatePayload: Record<string, string> = {
+          email: formData.email,
+          full_name: formData.name,
+          role: formData.role
+        };
+        if (formData.password.trim() !== '') {
+          updatePayload.password = formData.password;
+        }
 
-    if (editingUser) {
-      setUsers(users.map(u => u.id === editingUser.id ? {
-        ...u,
-        name: formData.name,
-        email: formData.email,
-        role: formData.role,
-        initials
-      } : u));
-      showToast('Usuario actualizado correctamente');
-    } else {
-      const colors = ['#4f8cff', '#a855f7', '#22c55e', '#f59e0b', '#ef4444', '#06b6d4'];
-      const newUser: UserAssignment = {
-        id: Date.now().toString(),
-        name: formData.name,
-        email: formData.email,
-        role: formData.role,
-        initials,
-        color: colors[Math.floor(Math.random() * colors.length)],
-        carga: false,
-        analisis: false,
-        tendencias: false,
-        workspace: false,
-        reportes: false,
-        lastLogin: 'Nunca',
-        status: 'offline',
-      };
-      setUsers([...users, newUser]);
-      showToast('Usuario creado correctamente');
+        const res = await fetch(`http://localhost:8000/api/v1/users/${editingUser.id}`, {
+          method: 'PUT',
+          headers: getHeaders(),
+          body: JSON.stringify(updatePayload)
+        });
+        if (res.ok) {
+          showToast('Usuario actualizado correctamente');
+          fetchUsers();
+          setShowModal(false);
+        } else {
+          showToast('Error al actualizar usuario', 'error');
+        }
+      } else {
+        // Create
+        if (!formData.password.trim()) {
+          showToast('La contraseña inicial es obligatoria', 'error');
+          return;
+        }
+        
+        const res = await fetch(`http://localhost:8000/api/v1/users/`, {
+          method: 'POST',
+          headers: getHeaders(),
+          body: JSON.stringify({
+            email: formData.email,
+            full_name: formData.name,
+            password: formData.password,
+            role: formData.role,
+            is_active: true,
+            status: 'offline'
+          })
+        });
+        if (res.ok) {
+          showToast('Usuario creado correctamente');
+          fetchUsers();
+          setShowModal(false);
+        } else {
+          const err = await res.json();
+          showToast(err.detail || 'Error al crear usuario', 'error');
+        }
+      }
+    } catch {
+      showToast('Error de red', 'error');
     }
-    setShowModal(false);
   };
 
   const selectAll = (field: 'carga' | 'analisis' | 'tendencias' | 'workspace' | 'reportes') => {
@@ -281,10 +315,20 @@ export default function AsignacionModulos() {
                   value={formData.role}
                   onChange={e => setFormData({ ...formData, role: e.target.value })}
                 >
-                  <option value="Analista">Analista</option>
-                  <option value="Gerente">Gerente</option>
-                  <option value="Administrador">Administrador</option>
+                  <option value="analyst">Analista</option>
+                  <option value="manager">Gerente</option>
+                  <option value="admin">Administrador</option>
                 </select>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Contraseña {editingUser ? '(Opcional para actualizar)' : 'Inicial'}</label>
+                <input
+                  className="form-input"
+                  type="password"
+                  placeholder="••••••••"
+                  value={formData.password}
+                  onChange={e => setFormData({ ...formData, password: e.target.value })}
+                />
               </div>
               
               <div className="modal-footer" style={{ marginTop: '24px', display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>

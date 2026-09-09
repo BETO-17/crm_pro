@@ -1,4 +1,5 @@
 import { type ReactNode } from 'react';
+import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
   Users,
@@ -10,9 +11,6 @@ import {
 import './AdminLayout.css';
 
 interface AdminLayoutProps {
-  children: ReactNode;
-  activeView: string;
-  onNavigate: (view: string) => void;
   topBar?: ReactNode;
   sidebarFooter?: ReactNode;
 }
@@ -25,12 +23,18 @@ const navItems = [
 ];
 
 export default function AdminLayout({
-  children,
-  activeView,
-  onNavigate,
   topBar,
   sidebarFooter,
 }: AdminLayoutProps) {
+  const navigate = useNavigate();
+  const location = useLocation();
+  
+  // Determine active view from URL path
+  const path = location.pathname;
+  let activeView = 'dashboard';
+  if (path.includes('/usuarios')) activeView = 'usuarios';
+  if (path.includes('/tendencias')) activeView = 'tendencias';
+  if (path.includes('/reportes')) activeView = 'reportes';
   return (
     <div className="admin-layout">
       {/* ---- Sidebar ---- */}
@@ -59,7 +63,7 @@ export default function AdminLayout({
               <button
                 key={item.id}
                 className={`sidebar-nav-item ${activeView === item.id ? 'active' : ''}`}
-                onClick={() => onNavigate(item.id)}
+                onClick={() => navigate(`/admin/${item.id}`)}
                 aria-current={activeView === item.id ? 'page' : undefined}
               >
                 <Icon className="nav-icon" aria-hidden="true" />
@@ -93,7 +97,7 @@ export default function AdminLayout({
           </header>
         )}
         <main className="admin-main">
-          {children}
+          <Outlet />
         </main>
       </div>
     </div>

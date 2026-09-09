@@ -1,8 +1,6 @@
 import { useState } from 'react';
 import {
   FileText,
-  Download,
-  Eye,
   Edit,
   CheckCircle,
   X,
