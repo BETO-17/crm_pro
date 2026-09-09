@@ -1,4 +1,5 @@
 import { type ReactNode } from 'react';
+import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import {
   User,
   Upload,
@@ -14,9 +15,6 @@ import './AdminLayout.css';
 import './AnalystLayout.css';
 
 interface AnalystLayoutProps {
-  children: ReactNode;
-  activeView: string;
-  onNavigate: (view: string) => void;
   topBar?: ReactNode;
 }
 
@@ -30,11 +28,19 @@ const navItems = [
 ];
 
 export default function AnalystLayout({
-  children,
-  activeView,
-  onNavigate,
   topBar,
 }: AnalystLayoutProps) {
+  const navigate = useNavigate();
+  const location = useLocation();
+  
+  // Determine active view from URL path
+  const path = location.pathname;
+  let activeView = 'perfil';
+  if (path.includes('/carga')) activeView = 'carga';
+  if (path.includes('/observacion')) activeView = 'observacion';
+  if (path.includes('/comparacion')) activeView = 'comparacion';
+  if (path.includes('/workspace')) activeView = 'workspace';
+  if (path.includes('/informes')) activeView = 'informes';
   return (
     <div className="admin-layout">
       {/* ---- Sidebar ---- */}
@@ -63,7 +69,7 @@ export default function AnalystLayout({
               <button
                 key={item.id}
                 className={`sidebar-nav-item ${activeView === item.id ? 'active' : ''}`}
-                onClick={() => onNavigate(item.id)}
+                onClick={() => navigate(`/analyst/${item.id}`)}
                 aria-current={activeView === item.id ? 'page' : undefined}
               >
                 <Icon className="nav-icon" aria-hidden="true" />
@@ -74,7 +80,7 @@ export default function AnalystLayout({
         </nav>
 
         <div className="sidebar-footer">
-          <button className="sidebar-newload-btn" onClick={() => onNavigate('carga')}>
+          <button className="sidebar-newload-btn" onClick={() => navigate('/analyst/carga')}>
             <Plus size={16} aria-hidden="true" />
             New Load
           </button>
@@ -100,7 +106,7 @@ export default function AnalystLayout({
           </header>
         )}
         <main className="admin-main">
-          {children}
+          <Outlet />
         </main>
       </div>
     </div>

@@ -118,11 +118,42 @@ export default function AdminLoginModal({ isOpen, onClose, onLoginSuccess }: Adm
 
       setIsLoading(true);
 
-      // Simulate API call
-      setTimeout(() => {
-        setIsLoading(false);
-        setStep(2);
-      }, 800);
+      // Call API for password login
+      fetch('http://localhost:8000/api/v1/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: email.trim(),
+          password: password.trim(),
+        }),
+      })
+        .then(async (res) => {
+          if (!res.ok) {
+            const data = await res.json();
+            throw new Error(data.detail || 'Credenciales incorrectas');
+          }
+          // Si las credenciales son correctas, solicitar OTP
+          return fetch('http://localhost:8000/api/v1/auth/request-otp', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: email.trim() }),
+          });
+        })
+        .then(async (res) => {
+          setIsLoading(false);
+          if (!res.ok) {
+            const data = await res.json();
+            setError(data.detail || 'Error al solicitar el código OTP');
+            return;
+          }
+          setStep(2);
+        })
+        .catch((err) => {
+          setIsLoading(false);
+          setError(err.message || 'Error de conexión con el servidor');
+        });
     },
     [email, password]
   );
@@ -182,26 +213,60 @@ export default function AdminLoginModal({ isOpen, onClose, onLoginSuccess }: Adm
 
       setIsLoading(true);
 
-      // Simulate OTP verification
-      setTimeout(() => {
-        setIsLoading(false);
-        resetState();
-        onLoginSuccess();
-      }, 1000);
+      // Enviar código al backend
+      fetch('http://localhost:8000/api/v1/auth/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: email.trim(),
+          code: code,
+        }),
+      })
+        .then(async (res) => {
+          setIsLoading(false);
+          const data = await res.json();
+          if (!res.ok) {
+            setError(data.detail || 'Código inválido o expirado');
+            return;
+          }
+          localStorage.setItem('token', data.access_token);
+          resetState();
+          onLoginSuccess();
+        })
+        .catch(() => {
+          setIsLoading(false);
+          setError('Error de conexión con el servidor');
+        });
     },
-    [otpDigits, resetState, onLoginSuccess]
+    [otpDigits, resetState, onLoginSuccess, email]
   );
 
   /** Handle resend code */
   const handleResendCode = useCallback(() => {
-    setResendMessage('Código reenviado exitosamente');
-    setOtpDigits(['', '', '', '', '', '']);
-    otpRefs.current[0]?.focus();
-
-    setTimeout(() => {
-      setResendMessage('');
-    }, 3000);
-  }, []);
+    setIsLoading(true);
+    fetch('http://localhost:8000/api/v1/auth/request-otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email.trim() }),
+    })
+      .then((res) => {
+        setIsLoading(false);
+        if (res.ok) {
+          setResendMessage('Código reenviado exitosamente');
+          setOtpDigits(['', '', '', '', '', '']);
+          otpRefs.current[0]?.focus();
+          setTimeout(() => {
+            setResendMessage('');
+          }, 3000);
+        } else {
+          setError('Error al reenviar el código');
+        }
+      })
+      .catch(() => {
+        setIsLoading(false);
+        setError('Error de conexión');
+      });
+  }, [email]);
 
   /** Go back to step 1 */
   const handleGoBack = useCallback(() => {

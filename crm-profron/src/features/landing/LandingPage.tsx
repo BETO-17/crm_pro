@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import LandingNavbar from './components/LandingNavbar';
 import HeroSection from './components/HeroSection';
 import DashboardPreview from './components/DashboardPreview';
@@ -7,14 +8,11 @@ import ModulesSection from './components/ModulesSection';
 import TestimonialsSection from './components/TestimonialsSection';
 import PricingSection from './components/PricingSection';
 import FooterLanding from './components/FooterLanding';
+import WhatsAppBubble from './components/WhatsAppBubble';
 import './landing.css';
 
-interface LandingPageProps {
-  onLogin: () => void;
-  onAdminLogin: () => void;
-}
-
-export default function LandingPage({ onLogin, onAdminLogin }: LandingPageProps) {
+export default function LandingPage() {
+  const navigate = useNavigate();
   const observerRef = useRef<IntersectionObserver | null>(null);
 
   useEffect(() => {
@@ -39,7 +37,16 @@ export default function LandingPage({ onLogin, onAdminLogin }: LandingPageProps)
 
   return (
     <div style={{ background: '#fff', minHeight: '100vh' }}>
-      <LandingNavbar onLogin={onLogin} onAdminLogin={onAdminLogin} />
+      <LandingNavbar 
+        onLogin={() => {
+          localStorage.setItem('user', JSON.stringify({ role: 'analyst' }));
+          navigate('/analyst');
+        }} 
+        onAdminLogin={() => {
+          localStorage.setItem('user', JSON.stringify({ role: 'admin' }));
+          navigate('/admin');
+        }} 
+      />
       <main>
         <HeroSection />
         <DashboardPreview />
@@ -49,6 +56,7 @@ export default function LandingPage({ onLogin, onAdminLogin }: LandingPageProps)
         <PricingSection />
       </main>
       <FooterLanding />
+      <WhatsAppBubble />
     </div>
   );
 }
