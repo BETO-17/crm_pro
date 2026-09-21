@@ -37,15 +37,13 @@ export default function LandingPage() {
 
   return (
     <div style={{ background: '#fff', minHeight: '100vh' }}>
-      <LandingNavbar 
+      <LandingNavbar
         onLogin={() => {
-          localStorage.setItem('user', JSON.stringify({ role: 'analyst' }));
-          navigate('/analyst');
-        }} 
+          navigate('/portal-cursos');
+        }}
         onAdminLogin={() => {
-          localStorage.setItem('user', JSON.stringify({ role: 'admin' }));
-          navigate('/admin');
-        }} 
+          navigate('/portal-cursos');
+        }}
       />
       <main>
         <HeroSection />

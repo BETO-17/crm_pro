@@ -13,7 +13,7 @@ interface Testimonial {
 const testimonials: Testimonial[] = [
   {
     quote:
-      '"Antes de RetailMetrics 360, consolidar los CSVs de nuestras 64 tiendas tomaba 4 días cada fin de mes. Hoy, el parser inteligente procesa todo en 3 minutos. Redujimos el tiempo de preparación de reportes en un 40% y redirigimos a los analistas a encontrar oportunidades comerciales reales."',
+      '"Antes de ERPMetrics 360, consolidar los CSVs de nuestras 64 tiendas tomaba 4 días cada fin de mes. Hoy, el parser inteligente procesa todo en 3 minutos. Redujimos el tiempo de preparación de reportes en un 40% y redirigimos a los analistas a encontrar oportunidades comerciales reales."',
     name: 'Martín Gómez Valdés',
     role: 'Director Corporativo de Operaciones',
     company: 'Grupo Vanguard Retail',
