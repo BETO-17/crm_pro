@@ -1,5 +1,5 @@
 // ==========================================
-// RetailMetrics 360 — Global Types
+// ERPMetrics 360 — Global Types
 // ==========================================
 
 /** User roles in the platform */

@@ -11,15 +11,15 @@ interface WhatsAppBubbleProps {
 }
 
 const QUICK_OPTIONS = [
-  '🚀 Solicitar demo guiada de RetailMetrics 360',
+  '🚀 Solicitar demo guiada de ERPMetrics 360',
   '📊 Consultar planes para mi cadena retail',
   '💬 Hablar con un especialista comercial',
 ];
 
 export default function WhatsAppBubble({
   phoneNumber = import.meta.env.VITE_WHATSAPP_NUMBER || '573001234567',
-  companyName = 'RetailMetrics 360',
-  defaultMessage = import.meta.env.VITE_WHATSAPP_MESSAGE || 'Hola, me gustaría recibir más información y una demo sobre RetailMetrics 360',
+  companyName = 'ERPMetrics 360',
+  defaultMessage = import.meta.env.VITE_WHATSAPP_MESSAGE || 'Hola, me gustaría recibir más información y una demo sobre ERPMetrics 360',
 }: WhatsAppBubbleProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [customMessage, setCustomMessage] = useState('');

@@ -210,7 +210,7 @@ export default function GestionUsuarios() {
 
       <h1 className="page-title">Gestión de Usuarios</h1>
       <p className="page-subtitle">
-        Administra el acceso y los permisos de los módulos para la plataforma RetailMetrics 360.
+        Administra el acceso y los permisos de los módulos para la plataforma ERPMetrics 360.
       </p>
 
       {/* Stats Row */}

@@ -348,7 +348,7 @@ export default function AdminLoginModal({ isOpen, onClose, onLoginSuccess }: Adm
                   ref={emailRef}
                   type="email"
                   className="login-modal-input"
-                  placeholder="admin@retailmetrics360.com"
+                  placeholder="admin@erpmetrics360.com"
                   value={email}
                   onChange={(e) => {
                     setEmail(e.target.value);

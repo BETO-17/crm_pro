@@ -25,9 +25,9 @@ const activities: Activity[] = [
 export default function PerfilUsuario() {
   const [editing, setEditing] = useState(false);
   const [profile, setProfile] = useState({
-    nombre: 'Retail Admin',
-    correo: 'admin@retailmetrics.com',
-    departamento: 'Data Science',
+    nombre: 'ERP Admin',
+    correo: 'admin@erpmetrics360.com',
+    departamento: 'Data Science & Big Data',
   });
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' } | null>(null);
   const [downloadedIds, setDownloadedIds] = useState<Set<string>>(new Set());

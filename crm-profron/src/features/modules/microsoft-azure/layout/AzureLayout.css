@@ -1,0 +1,11 @@
+/* ==========================================
+   AzureLayout — Sidebar + Layout
+   ========================================== */
+
+.azure-sidebar {
+  background: #002244 !important;
+}
+
+.azure-brand-icon {
+  background: linear-gradient(135deg, #0078d4, #00bcf2) !important;
+}

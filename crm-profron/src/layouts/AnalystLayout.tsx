@@ -32,7 +32,7 @@ export default function AnalystLayout({
 }: AnalystLayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
-  
+
   // Determine active view from URL path
   const path = location.pathname;
   let activeView = 'perfil';
@@ -47,9 +47,9 @@ export default function AnalystLayout({
       <aside className="admin-sidebar analyst-sidebar" aria-label="Sidebar de navegación">
         <div className="sidebar-header">
           <div className="sidebar-brand">
-            <div className="sidebar-brand-icon">RM</div>
+            <div className="sidebar-brand-icon">EM</div>
             <div className="sidebar-brand-text">
-              <span className="sidebar-brand-name">RetailMetrics 360</span>
+              <span className="sidebar-brand-name">ERPMetrics 360</span>
               <span className="sidebar-brand-sub">Executive Analytics</span>
             </div>
           </div>

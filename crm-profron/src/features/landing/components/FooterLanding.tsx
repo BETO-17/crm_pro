@@ -8,7 +8,7 @@ export default function FooterLanding() {
             <div className="landing-logo">
               <div className="landing-logo-icon" aria-hidden="true">M</div>
               <div>
-                <span>RetailMetrics 360</span>
+                <span>ERPMetrics 360</span>
                 <span className="landing-logo-sub">Executive Analytics</span>
               </div>
             </div>
@@ -55,7 +55,7 @@ export default function FooterLanding() {
         </div>
 
         <div className="landing-footer-bottom">
-          <p>© 2026 RetailMetrics 360. Todos los derechos reservados.</p>
+          <p>© 2026 ERPMetrics 360. Todos los derechos reservados.</p>
           <div className="landing-footer-bottom-links">
             <a href="#privacy">Privacidad</a>
             <a href="#terms">Términos de Servicio</a>

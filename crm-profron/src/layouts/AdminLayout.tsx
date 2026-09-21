@@ -5,6 +5,7 @@ import {
   Users,
   TrendingUp,
   FileText,
+  GraduationCap,
   Settings,
   HelpCircle,
 } from 'lucide-react';
@@ -20,6 +21,7 @@ const navItems = [
   { id: 'usuarios', label: 'Usuarios', icon: Users },
   { id: 'tendencias', label: 'Tendencias', icon: TrendingUp },
   { id: 'reportes', label: 'Reportes', icon: FileText },
+  { id: 'cursos', label: 'Cursos', icon: GraduationCap },
 ];
 
 export default function AdminLayout({
@@ -28,30 +30,24 @@ export default function AdminLayout({
 }: AdminLayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
-  
+
   // Determine active view from URL path
   const path = location.pathname;
   let activeView = 'dashboard';
   if (path.includes('/usuarios')) activeView = 'usuarios';
   if (path.includes('/tendencias')) activeView = 'tendencias';
   if (path.includes('/reportes')) activeView = 'reportes';
+  if (path.includes('/cursos')) activeView = 'cursos';
   return (
     <div className="admin-layout">
       {/* ---- Sidebar ---- */}
       <aside className="admin-sidebar" aria-label="Sidebar de navegación">
         <div className="sidebar-header">
           <div className="sidebar-brand">
-            <div className="sidebar-brand-icon">RM</div>
+            <div className="sidebar-brand-icon">EM</div>
             <div className="sidebar-brand-text">
-              <span className="sidebar-brand-name">RetailMetrics 360</span>
+              <span className="sidebar-brand-name">ERPMetrics 360</span>
               <span className="sidebar-brand-sub">Executive Analytics</span>
-            </div>
-          </div>
-          <div className="sidebar-profile">
-            <div className="sidebar-avatar" aria-hidden="true">RA</div>
-            <div className="sidebar-user-info">
-              <span className="sidebar-user-name">Retail Admin</span>
-              <span className="sidebar-user-role">Administrator Role</span>
             </div>
           </div>
         </div>

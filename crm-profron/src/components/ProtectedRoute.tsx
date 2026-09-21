@@ -14,7 +14,7 @@ export default function ProtectedRoute({ allowedRoles }: ProtectedRouteProps) {
 
   try {
     const user = JSON.parse(userStr);
-    
+
     // Si la ruta requiere roles específicos, validamos
     if (allowedRoles && allowedRoles.length > 0) {
       if (!allowedRoles.includes(user.role)) {
