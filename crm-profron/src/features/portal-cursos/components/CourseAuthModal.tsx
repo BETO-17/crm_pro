@@ -6,7 +6,6 @@ import {
   Eye,
   EyeOff,
   Sparkles,
-  CheckCircle2,
 } from 'lucide-react';
 
 interface CourseAuthModalProps {

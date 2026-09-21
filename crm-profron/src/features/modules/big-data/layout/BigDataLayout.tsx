@@ -11,7 +11,7 @@ import {
   ArrowLeft,
   Database,
 } from 'lucide-react';
-import '../../../admin/layout/AdminLayout.css';
+import '../../../admin/admin_data/layout/AdminLayout.css';
 import './BigDataLayout.css';
 
 interface BigDataLayoutProps {

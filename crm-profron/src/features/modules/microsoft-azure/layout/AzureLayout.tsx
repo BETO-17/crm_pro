@@ -9,7 +9,7 @@ import {
   HelpCircle,
   ArrowLeft,
 } from 'lucide-react';
-import '../../../admin/layout/AdminLayout.css';
+import '../../../admin/admin_data/layout/AdminLayout.css';
 import './AzureLayout.css';
 
 interface AzureLayoutProps {

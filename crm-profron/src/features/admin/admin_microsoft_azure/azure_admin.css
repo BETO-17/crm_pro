@@ -1,0 +1,160 @@
+/* ==========================================
+   Microsoft Azure Admin Module Stylesheet
+   ========================================== */
+
+.azure-admin-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.azure-admin-card {
+  background: #ffffff;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 12px;
+  padding: 20px;
+  transition: all 0.2s ease;
+}
+
+.azure-admin-card:hover {
+  box-shadow: 0 4px 14px rgba(0, 120, 212, 0.08);
+  border-color: #93c5fd;
+}
+
+.azure-card-header-flex {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.azure-card-icon-pill {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: rgba(0, 120, 212, 0.1);
+  color: #0078d4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.azure-card-stat-val {
+  font-size: 24px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 4px;
+}
+
+.azure-card-stat-label {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.azure-table-card {
+  background: #ffffff;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 24px;
+}
+
+.azure-table-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid #f1f5f9;
+  background: #fafbfc;
+}
+
+.azure-table-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.azure-admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  text-align: left;
+}
+
+.azure-admin-table th {
+  padding: 12px 18px;
+  background: #f8fafc;
+  color: #64748b;
+  font-weight: 600;
+  font-size: 12px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.azure-admin-table td {
+  padding: 14px 18px;
+  border-bottom: 1px solid #f1f5f9;
+  color: #0f172a;
+  vertical-align: middle;
+}
+
+.azure-admin-table tr:hover td {
+  background: #f8fafc;
+}
+
+.azure-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.azure-status-pill.running {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.azure-status-pill.stopped {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.azure-status-pill.updating {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.azure-action-btn-small {
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #0f172a;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.azure-action-btn-small:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.azure-action-btn-primary {
+  background: #0078d4;
+  color: #ffffff;
+  border: none;
+}
+
+.azure-action-btn-primary:hover {
+  background: #005a9e;
+}

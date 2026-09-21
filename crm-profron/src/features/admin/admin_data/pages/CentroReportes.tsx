@@ -11,7 +11,7 @@ import {
   Search,
   FileText,
 } from 'lucide-react';
-import type { ReportCategory, ExportFormat } from '../../../types';
+import type { ReportCategory, ExportFormat } from '../../../../core/types';
 
 interface TrendMetric {
   label: string;

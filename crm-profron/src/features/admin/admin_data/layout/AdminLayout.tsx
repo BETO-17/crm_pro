@@ -21,7 +21,6 @@ const navItems = [
   { id: 'usuarios', label: 'Usuarios', icon: Users },
   { id: 'tendencias', label: 'Tendencias', icon: TrendingUp },
   { id: 'reportes', label: 'Reportes', icon: FileText },
-  { id: 'cursos', label: 'Cursos', icon: GraduationCap },
 ];
 
 export default function AdminLayout({
@@ -37,7 +36,6 @@ export default function AdminLayout({
   if (path.includes('/usuarios')) activeView = 'usuarios';
   if (path.includes('/tendencias')) activeView = 'tendencias';
   if (path.includes('/reportes')) activeView = 'reportes';
-  if (path.includes('/cursos')) activeView = 'cursos';
   return (
     <div className="admin-layout">
       {/* ---- Sidebar ---- */}
@@ -72,6 +70,18 @@ export default function AdminLayout({
         <div className="sidebar-footer">
           {sidebarFooter}
           <div className="sidebar-footer-actions">
+            <button
+              className="sidebar-footer-btn"
+              onClick={() => navigate('/portal-cursos')}
+              title="Ir al Portal de Cursos y Especialidades"
+              style={{
+                color: '#38bdf8',
+                fontWeight: 600,
+              }}
+            >
+              <GraduationCap className="nav-icon" aria-hidden="true" color="#38bdf8" />
+              Portal de Cursos
+            </button>
             <button className="sidebar-footer-btn">
               <Settings className="nav-icon" aria-hidden="true" />
               Settings

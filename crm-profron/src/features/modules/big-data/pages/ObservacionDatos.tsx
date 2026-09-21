@@ -13,7 +13,7 @@ import {
   CheckCircle2,
   Edit3,
 } from 'lucide-react';
-import { supabase } from '../../../lib/supabaseClient';
+import { supabase } from '../../../../core/lib/supabaseClient';
 
 interface ChatMessage {
   id: string;

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { ShieldAlert, ArrowRight } from 'lucide-react';
+import { ShieldCheck, ArrowRight } from 'lucide-react';
 import LoginModal from './LoginModal';
 import AdminLoginModal from './AdminLoginModal';
 
@@ -15,7 +15,7 @@ export default function LandingNavbar({ onLogin, onAdminLogin }: LandingNavbarPr
   const [showAdminLogin, setShowAdminLogin] = useState(false);
   const [showAdminBtn, setShowAdminBtn] = useState(false);
   const [clickCount, setClickCount] = useState(0);
-  const clickTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -26,8 +26,8 @@ export default function LandingNavbar({ onLogin, onAdminLogin }: LandingNavbarPr
   }, []);
 
   const handleLogoClick = () => {
-    if (clickTimeoutRef.current) {
-      clearTimeout(clickTimeoutRef.current);
+    if (clickTimerRef.current) {
+      clearTimeout(clickTimerRef.current);
     }
 
     const nextCount = clickCount + 1;
@@ -36,10 +36,10 @@ export default function LandingNavbar({ onLogin, onAdminLogin }: LandingNavbarPr
       setClickCount(0);
     } else {
       setClickCount(nextCount);
-      // Reset if no clicks within 3 seconds
-      clickTimeoutRef.current = setTimeout(() => {
+      // Reset counter if no click happens within 2.5 seconds
+      clickTimerRef.current = setTimeout(() => {
         setClickCount(0);
-      }, 3000);
+      }, 2500);
     }
   };
 
@@ -68,7 +68,7 @@ export default function LandingNavbar({ onLogin, onAdminLogin }: LandingNavbarPr
             tabIndex={0}
             onClick={handleLogoClick}
             aria-label="ERPMetrics 360"
-            title="ERPMetrics 360"
+            title="ERPMetrics 360 (Haz 5 clics para acceso admin)"
           >
             <div className="landing-logo-icon" aria-hidden="true">M</div>
             <div>
@@ -91,11 +91,12 @@ export default function LandingNavbar({ onLogin, onAdminLogin }: LandingNavbarPr
           {showAdminBtn && (
             <button
               className="landing-btn-admin-login"
-              onClick={onAdminLogin}
-              aria-label="Panel Admin"
+              onClick={() => setShowAdminLogin(true)}
+              aria-label="Inicio Sesion Admin"
+              title="Ingreso para Administradores"
             >
-              <ShieldAlert size={14} />
-              Panel Admin
+              <ShieldCheck size={14} />
+              Inicio Sesion Admin
             </button>
           )}
 

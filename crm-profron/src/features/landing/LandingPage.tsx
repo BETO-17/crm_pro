@@ -42,9 +42,7 @@ export default function LandingPage() {
           navigate('/portal-cursos');
         }}
         onAdminLogin={() => {
-          localStorage.setItem('token', 'admin-token');
-          localStorage.setItem('user', JSON.stringify({ role: 'admin', full_name: 'Retail Admin' }));
-          navigate('/admin/dashboard');
+          navigate('/portal-cursos');
         }}
       />
       <main>

@@ -7,6 +7,7 @@ import {
 import CourseGiftCard, { type CourseCardData } from './components/CourseGiftCard';
 import CourseAuthModal from './components/CourseAuthModal';
 import RequestAccessModal from './components/RequestAccessModal';
+import LogoutConfirmModal from '../../core/components/LogoutConfirmModal';
 import './portal-cursos.css';
 
 export default function PortalCursosPage() {
@@ -18,6 +19,7 @@ export default function PortalCursosPage() {
   const [authModalCard, setAuthModalCard] = useState<CourseCardData | null>(null);
   const [requestModalCard, setRequestModalCard] = useState<CourseCardData | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   // Module permissions state in localStorage
   const [permissions, setPermissions] = useState<{ bigData: 'approved' | 'pending' | 'locked'; microsoftAzure: 'approved' | 'pending' | 'locked' }>(() => {
@@ -56,16 +58,20 @@ export default function PortalCursosPage() {
     }
   }, [searchParams]);
 
+  const isAdmin = user?.role === 'admin';
+
   const cards: CourseCardData[] = [
     {
       id: 'card-big-data',
       key: 'bigData',
       code: 'BDS-001',
       title: 'Big Data & Analytics Suite',
-      route: '/modules/big-data',
-      summary: 'Suite integral de análisis de datos para retail',
+      route: isAdmin ? '/admin/dashboard' : '/modules/big-data',
+      summary: isAdmin
+        ? 'Consola de administración, analítica global y gestión de retail'
+        : 'Suite integral de análisis de datos para retail',
       category: 'Ciencia de Datos & Retail Analytics',
-      badge: 'ESPECIALIDAD 1',
+      badge: isAdmin ? 'ADMINISTRADOR BIG DATA' : 'ESPECIALIDAD 1',
       description:
         'Entorno dedicado para carga masiva de datasets, observación estadística, limpieza de datos, algoritmos comparativos y generación de reportes ejecutivos.',
       theme: 'navy',
@@ -91,17 +97,19 @@ export default function PortalCursosPage() {
           iconType: 'users',
         },
       ],
-      status: permissions.bigData,
+      status: isAdmin ? 'approved' : permissions.bigData,
     },
     {
       id: 'card-azure',
       key: 'microsoftAzure',
       code: 'AZC-002',
       title: 'Microsoft Azure Cloud Platform',
-      route: '/modules/azure',
-      summary: 'Entorno de infraestructura en la nube y pipelines',
+      route: isAdmin ? '/admin/azure/dashboard' : '/modules/azure',
+      summary: isAdmin
+        ? 'Consola de gestión de infraestructura en la nube, VMs y data factory'
+        : 'Entorno de infraestructura en la nube y pipelines',
       category: 'Infraestructura Cloud & Data Factory',
-      badge: 'ESPECIALIDAD 2',
+      badge: isAdmin ? 'ADMINISTRADOR AZURE' : 'ESPECIALIDAD 2',
       description:
         'Laboratorio en la nube para aprovisionamiento de recursos computacionales, almacenamiento Blob Storage y canalizaciones de orquestación de datos.',
       theme: 'slate',
@@ -127,11 +135,21 @@ export default function PortalCursosPage() {
           iconType: 'activity',
         },
       ],
-      status: permissions.microsoftAzure,
+      status: isAdmin ? 'approved' : permissions.microsoftAzure,
     },
   ];
 
   const handleEnterClick = (card: CourseCardData) => {
+    if (isAdmin) {
+      if (card.key === 'bigData') {
+        navigate('/admin/dashboard');
+        return;
+      }
+      if (card.key === 'microsoftAzure') {
+        navigate('/admin/azure/dashboard');
+        return;
+      }
+    }
     setAuthModalCard(card);
   };
 
@@ -141,9 +159,15 @@ export default function PortalCursosPage() {
 
   const handleAuthSuccess = () => {
     if (!authModalCard) return;
-    const targetRoute = authModalCard.route;
-    setAuthModalCard(null);
-    navigate(targetRoute);
+    if (isAdmin) {
+      const targetAdmin = authModalCard.key === 'bigData' ? '/admin/dashboard' : '/admin/azure/dashboard';
+      setAuthModalCard(null);
+      navigate(targetAdmin);
+    } else {
+      const targetRoute = authModalCard.route;
+      setAuthModalCard(null);
+      navigate(targetRoute);
+    }
   };
 
   const handleRequestSubmitted = () => {
@@ -156,7 +180,12 @@ export default function PortalCursosPage() {
     setTimeout(() => setToastMessage(null), 3500);
   };
 
-  const handleLogout = () => {
+  const handleLogoutClick = () => {
+    setShowLogoutModal(true);
+  };
+
+  const handleConfirmLogout = () => {
+    setShowLogoutModal(false);
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     navigate('/');
@@ -187,7 +216,7 @@ export default function PortalCursosPage() {
             </span>
           </div>
 
-          <button className="portal-btn-logout" onClick={handleLogout} title="Cerrar Sesión">
+          <button className="portal-btn-logout" onClick={handleLogoutClick} title="Cerrar Sesión">
             <LogOut size={16} />
             Salir
           </button>
@@ -309,6 +338,13 @@ export default function PortalCursosPage() {
           onRequestSubmitted={handleRequestSubmitted}
         />
       )}
+
+      {/* ---- Logout Confirmation Modal ---- */}
+      <LogoutConfirmModal
+        isOpen={showLogoutModal}
+        onClose={() => setShowLogoutModal(false)}
+        onConfirm={handleConfirmLogout}
+      />
     </div>
   );
 }

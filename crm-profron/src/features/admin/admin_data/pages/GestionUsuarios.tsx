@@ -13,7 +13,7 @@ import {
   Trash2,
   Edit,
 } from 'lucide-react';
-import type { ModuleStatus } from '../../../types';
+import type { ModuleStatus } from '../../../../core/types';
 
 interface ModuleItem {
   id: string;

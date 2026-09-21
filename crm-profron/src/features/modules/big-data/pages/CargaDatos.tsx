@@ -204,7 +204,7 @@ export default function CargaDatos() {
 
   const handleGoToObservation = (tableName: string) => {
     localStorage.setItem('lastUploadedTable', tableName);
-    navigate('/analyst/observacion');
+    navigate('/modules/big-data/observacion');
   };
 
   const handleDeleteSaved = (id: string) => {

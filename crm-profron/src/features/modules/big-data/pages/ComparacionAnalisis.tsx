@@ -17,7 +17,7 @@ import {
   Sparkles,
   FileSpreadsheet,
 } from 'lucide-react';
-import { supabase } from '../../../lib/supabaseClient';
+import { supabase } from '../../../../core/lib/supabaseClient';
 
 export interface DatasetOption {
   tableName: string;

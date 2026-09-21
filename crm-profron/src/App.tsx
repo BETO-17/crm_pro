@@ -3,6 +3,7 @@ import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-
 import ProtectedRoute from './core/components/ProtectedRoute';
 import ModuleGuard from './core/components/ModuleGuard';
 import NotificationBell from './core/components/NotificationBell';
+import LogoutConfirmModal from './core/components/LogoutConfirmModal';
 import {
   Settings,
   UserCircle,
@@ -18,29 +19,38 @@ import LandingPage from './features/landing/LandingPage';
 import PortalCursosPage from './features/portal-cursos/PortalCursosPage';
 
 // Admin Module
-import AdminLayout from './features/admin/layout/AdminLayout';
-import GestionUsuarios from './features/admin/pages/GestionUsuarios';
-import AsignacionModulos from './features/admin/pages/AsignacionModulos';
-import Tendencias from './features/admin/pages/Tendencias';
-import CentroReportes from './features/admin/pages/CentroReportes';
-import Workspaces from './features/admin/pages/Workspaces';
-import CursosAdmin from './features/admin/pages/CursosAdmin';
+import AdminLayout from './features/admin/admin_data/layout/AdminLayout';
+import GestionUsuarios from './features/admin/admin_data/pages/GestionUsuarios';
+import AsignacionModulos from './features/admin/admin_data/pages/AsignacionModulos';
+import Tendencias from './features/admin/admin_data/pages/Tendencias';
+import CentroReportes from './features/admin/admin_data/pages/CentroReportes';
+import Workspaces from './features/admin/admin_data/pages/Workspaces';
 
 // Big Data Module
 import BigDataLayout from './features/modules/big-data/layout/BigDataLayout';
 import PerfilUsuario from './features/modules/big-data/pages/PerfilUsuario';
-import CargaDatos from './features/analyst/pages/CargaDatos';
-import ObservacionDatos from './features/analyst/pages/ObservacionDatos';
-import ComparacionAnalisis from './features/analyst/pages/ComparacionAnalisis';
-import AnalystWorkspaces from './features/analyst/pages/AnalystWorkspaces';
-import Informes from './features/analyst/pages/Informes';
+import CargaDatos from './features/modules/big-data/pages/CargaDatos';
+import ObservacionDatos from './features/modules/big-data/pages/ObservacionDatos';
+import ComparacionAnalisis from './features/modules/big-data/pages/ComparacionAnalisis';
+import AnalystWorkspaces from './features/modules/big-data/pages/AnalystWorkspaces';
+import Informes from './features/modules/big-data/pages/Informes';
 
-// Microsoft Azure Module
+// Microsoft Azure Module (Analyst / Laboratorio)
 import AzureLayout from './features/modules/microsoft-azure/layout/AzureLayout';
 import AzureOverview from './features/modules/microsoft-azure/pages/AzureOverview';
 
+// Azure Admin Module
+import AzureAdminLayout from './features/admin/admin_microsoft_azure/layout/AzureAdminLayout';
+import AzureAdminDashboard from './features/admin/admin_microsoft_azure/pages/AzureAdminDashboard';
+import AzureRecursosAdmin from './features/admin/admin_microsoft_azure/pages/AzureRecursosAdmin';
+import AzureStorageAdmin from './features/admin/admin_microsoft_azure/pages/AzureStorageAdmin';
+import AzurePipelinesAdmin from './features/admin/admin_microsoft_azure/pages/AzurePipelinesAdmin';
+import AzureCostosAdmin from './features/admin/admin_microsoft_azure/pages/AzureCostosAdmin';
+import AzureSeguridadAdmin from './features/admin/admin_microsoft_azure/pages/AzureSeguridadAdmin';
+
 // Stylesheets
-import './features/admin/admin.css';
+import './features/admin/admin_data/admin.css';
+import './features/admin/admin_microsoft_azure/azure_admin.css';
 import './features/modules/big-data/bigdata.css';
 
 /** Sub-views within the Usuarios tab */
@@ -50,8 +60,14 @@ function App() {
   const navigate = useNavigate();
   const location = useLocation();
   const [usuariosSubView, setUsuariosSubView] = useState<UsuariosSubView>('gestion');
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
-  const handleLogout = () => {
+  const handleLogoutClick = () => {
+    setShowLogoutModal(true);
+  };
+
+  const handleConfirmLogout = () => {
+    setShowLogoutModal(false);
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     navigate('/');
@@ -60,10 +76,6 @@ function App() {
   /* ===== ADMIN TOP BAR ===== */
   const renderAdminTopBar = () => {
     const path = location.pathname;
-
-    if (path.includes('/admin/cursos')) {
-      return null;
-    }
 
     if (path.includes('/admin/dashboard') || path.includes('/admin/usuarios')) {
       const isUsuarios = path.includes('/admin/usuarios');
@@ -100,7 +112,7 @@ function App() {
               <Settings size={16} />
             </button>
             <div className="topbar-avatar-small" aria-hidden="true">RA</div>
-            <button className="topbar-logout" onClick={handleLogout}>
+            <button className="topbar-logout" onClick={handleLogoutClick}>
               <LogOut size={14} />
               Cerrar Sesión
             </button>
@@ -128,7 +140,7 @@ function App() {
             <button className="topbar-icon-btn" aria-label="Perfil">
               <UserCircle size={16} />
             </button>
-            <button className="topbar-logout" onClick={handleLogout}>
+            <button className="topbar-logout" onClick={handleLogoutClick}>
               <LogOut size={14} />
               Cerrar Sesión
             </button>
@@ -160,7 +172,7 @@ function App() {
               <Settings size={16} />
             </button>
             <div className="topbar-avatar-small" aria-hidden="true">RA</div>
-            <button className="topbar-logout" onClick={handleLogout}>
+            <button className="topbar-logout" onClick={handleLogoutClick}>
               <LogOut size={14} />
               Cerrar Sesión
             </button>
@@ -189,7 +201,7 @@ function App() {
           </button>
           <NotificationBell module="big-data" />
           <div className="topbar-avatar-small" aria-hidden="true">CR</div>
-          <button className="topbar-logout" onClick={handleLogout}>
+          <button className="topbar-logout" onClick={handleLogoutClick}>
             <LogOut size={14} />
             Salir
           </button>
@@ -215,9 +227,41 @@ function App() {
           </button>
           <NotificationBell module="azure" />
           <div className="topbar-avatar-small" aria-hidden="true" style={{ background: 'linear-gradient(135deg, #0078d4, #00bcf2)' }}>AZ</div>
-          <button className="topbar-logout" onClick={handleLogout}>
+          <button className="topbar-logout" onClick={handleLogoutClick}>
             <LogOut size={14} />
             Salir
+          </button>
+        </div>
+      </>
+    );
+  };
+
+  /* ===== AZURE ADMIN TOP BAR ===== */
+  const renderAzureAdminTopBar = () => {
+    return (
+      <>
+        <div className="topbar-left">
+          <span className="topbar-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#0078d4' }} />
+            Azure Cloud Management Console
+          </span>
+        </div>
+        <div className="topbar-right">
+          <button
+            className="topbar-logout"
+            onClick={() => navigate('/portal-cursos')}
+            style={{ marginRight: 6 }}
+          >
+            ← Volver al Portal
+          </button>
+          <NotificationBell module="azure" />
+          <button className="topbar-icon-btn" aria-label="Configuración">
+            <Settings size={16} />
+          </button>
+          <div className="topbar-avatar-small" aria-hidden="true" style={{ background: 'linear-gradient(135deg, #0078d4, #002050)' }}>AZ</div>
+          <button className="topbar-logout" onClick={handleLogoutClick}>
+            <LogOut size={14} />
+            Cerrar Sesión
           </button>
         </div>
       </>
@@ -247,8 +291,9 @@ function App() {
 
   /* ===== RENDER ===== */
   return (
-    <Routes>
-      {/* 1. Landing Page Pública */}
+    <>
+      <Routes>
+        {/* 1. Landing Page Pública */}
       <Route path="/" element={<LandingPage />} />
 
       {/* 2. Portal de Selección de Cursos (Gift Cards) */}
@@ -257,7 +302,7 @@ function App() {
         <Route path="/cursos" element={<Navigate to="/portal-cursos" replace />} />
       </Route>
 
-      {/* 3. Módulo Dedicado: BIG DATA */}
+      {/* 3. Módulo Dedicado: BIG DATA (Analyst / Especialidad) */}
       <Route element={<ProtectedRoute />}>
         <Route
           path="/modules/big-data/*"
@@ -290,7 +335,7 @@ function App() {
         </Route>
       </Route>
 
-      {/* 4. Módulo Dedicado: MICROSOFT AZURE */}
+      {/* 4. Módulo Dedicado: MICROSOFT AZURE (Analyst / Laboratorio) */}
       <Route element={<ProtectedRoute />}>
         <Route
           path="/modules/azure/*"
@@ -308,7 +353,7 @@ function App() {
         </Route>
       </Route>
 
-      {/* 5. Panel de Administrador Global */}
+      {/* 5. Panel de Administrador: BIG DATA & GESTIÓN */}
       <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
         <Route path="/admin/*" element={<AdminLayout topBar={renderAdminTopBar()} sidebarFooter={renderSidebarFooter()} />}>
           <Route path="dashboard" element={
@@ -334,14 +379,37 @@ function App() {
 
           <Route path="tendencias" element={<Tendencias />} />
           <Route path="reportes" element={<CentroReportes />} />
-          <Route path="cursos" element={<CursosAdmin />} />
           <Route path="*" element={<Navigate to="usuarios/gestion" replace />} />
+        </Route>
+      </Route>
+
+      {/* 6. Panel de Administrador Dedicado: MICROSOFT AZURE */}
+      <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
+        <Route
+          path="/admin/azure/*"
+          element={<AzureAdminLayout topBar={renderAzureAdminTopBar()} />}
+        >
+          <Route path="dashboard" element={<AzureAdminDashboard />} />
+          <Route path="recursos" element={<AzureRecursosAdmin />} />
+          <Route path="storage" element={<AzureStorageAdmin />} />
+          <Route path="pipelines" element={<AzurePipelinesAdmin />} />
+          <Route path="costos" element={<AzureCostosAdmin />} />
+          <Route path="seguridad" element={<AzureSeguridadAdmin />} />
+          <Route path="*" element={<Navigate to="dashboard" replace />} />
         </Route>
       </Route>
 
       {/* Fallback general */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+
+    {/* Modal de confirmación de cierre de sesión */}
+    <LogoutConfirmModal
+      isOpen={showLogoutModal}
+      onClose={() => setShowLogoutModal(false)}
+      onConfirm={handleConfirmLogout}
+    />
+  </>
   );
 }
 

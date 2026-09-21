@@ -11,7 +11,7 @@ import {
   Target,
   BarChart3,
 } from 'lucide-react';
-import type { StrategyStatus } from '../../../types';
+import type { StrategyStatus } from '../../../../core/types';
 
 interface Strategy {
   id: string;
