@@ -1288,3 +1288,18 @@
   align-items: center;
   justify-content: center;
 }
+
+@keyframes facialScanLoop {
+  0% {
+    top: 0%;
+    opacity: 0.8;
+  }
+  50% {
+    top: 98%;
+    opacity: 1;
+  }
+  100% {
+    top: 0%;
+    opacity: 0.8;
+  }
+}
