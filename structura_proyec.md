@@ -96,6 +96,9 @@ crm_pro/
 │       └── utils/                   # Módulos utilitarios auxiliares
 │           └── email.py             # Enlace con servidor SMTP para envío de correos con códigos OTP
 │
+
+
+
 └── crm-profron/                     # ================= FRONTEND REACT ==================
     ├── .env                         # Variables públicas del cliente Vite (Supabase URL, Anon Key, etc.)
     ├── AGENTS.md                    # Reglas de desarrollo, diseño y principios de UI del frontend
@@ -320,3 +323,4 @@ npm run lint
 # Compilación y chequeo de tipos estricto (TypeScript + Vite)
 npm run build
 ```
+

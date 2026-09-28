@@ -12,7 +12,7 @@ export default function DashboardPreview() {
             <div className="landing-dash-dot" />
           </div>
           <div className="landing-dash-url">
-            retailmetrics360.internal/workspace-q3-consolidated
+            erpmetrics360.internal/workspace-q3-consolidated
           </div>
           <div className="landing-dash-badges">
             <span className="landing-dash-badge-live">

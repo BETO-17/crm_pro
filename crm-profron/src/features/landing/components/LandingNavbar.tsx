@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { ExternalLink, ShieldAlert } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { ShieldCheck, ArrowRight } from 'lucide-react';
 import LoginModal from './LoginModal';
 import AdminLoginModal from './AdminLoginModal';
 
@@ -8,19 +8,13 @@ interface LandingNavbarProps {
   onAdminLogin: () => void;
 }
 
-/** Number of clicks on the logo required to reveal admin access */
-const ADMIN_CLICK_THRESHOLD = 10;
-/** Time window (ms) to complete the click sequence */
-const ADMIN_CLICK_TIMEOUT = 5000;
-
 export default function LandingNavbar({ onLogin, onAdminLogin }: LandingNavbarProps) {
   const [scrolled, setScrolled] = useState(false);
-  const [showLogin, setShowLogin] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [showAdminLogin, setShowAdminLogin] = useState(false);
-  const [adminAccessRevealed, setAdminAccessRevealed] = useState(false);
-
-  /** Track clicks for hidden admin access */
-  const clickCountRef = useRef(0);
+  const [showAdminBtn, setShowAdminBtn] = useState(false);
+  const [clickCount, setClickCount] = useState(0);
   const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -31,36 +25,33 @@ export default function LandingNavbar({ onLogin, onAdminLogin }: LandingNavbarPr
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  /** Clean up timer on unmount */
-  useEffect(() => {
-    return () => {
-      if (clickTimerRef.current) {
-        clearTimeout(clickTimerRef.current);
-      }
-    };
-  }, []);
-
-  /** Handle click on logo/brand name to reveal admin access */
-  const handleLogoClick = useCallback(() => {
-    if (adminAccessRevealed) return;
-
-    clickCountRef.current += 1;
-
-    // Reset timer on each click
+  const handleLogoClick = () => {
     if (clickTimerRef.current) {
       clearTimeout(clickTimerRef.current);
     }
 
-    if (clickCountRef.current >= ADMIN_CLICK_THRESHOLD) {
-      setAdminAccessRevealed(true);
-      clickCountRef.current = 0;
+    const nextCount = clickCount + 1;
+    if (nextCount >= 5) {
+      setShowAdminBtn(true);
+      setClickCount(0);
     } else {
-      // Reset click count if no more clicks within timeout
+      setClickCount(nextCount);
+      // Reset counter if no click happens within 2.5 seconds
       clickTimerRef.current = setTimeout(() => {
-        clickCountRef.current = 0;
-      }, ADMIN_CLICK_TIMEOUT);
+        setClickCount(0);
+      }, 2500);
     }
-  }, [adminAccessRevealed]);
+  };
+
+  const openLogin = () => {
+    setAuthMode('login');
+    setShowAuthModal(true);
+  };
+
+  const openRegister = () => {
+    setAuthMode('register');
+    setShowAuthModal(true);
+  };
 
   return (
     <>
@@ -72,21 +63,16 @@ export default function LandingNavbar({ onLogin, onAdminLogin }: LandingNavbarPr
         <div className="landing-navbar-left">
           <div
             className="landing-logo"
-            onClick={handleLogoClick}
             style={{ cursor: 'pointer', userSelect: 'none' }}
             role="button"
             tabIndex={0}
-            aria-label="RetailMetrics 360"
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                handleLogoClick();
-              }
-            }}
+            onClick={handleLogoClick}
+            aria-label="ERPMetrics 360"
+            title="ERPMetrics 360 (Haz 5 clics para acceso admin)"
           >
             <div className="landing-logo-icon" aria-hidden="true">M</div>
             <div>
-              <span>RetailMetrics 360</span>
+              <span>ERPMetrics 360</span>
               <span className="landing-logo-sub">Executive Analytics</span>
             </div>
           </div>
@@ -102,31 +88,39 @@ export default function LandingNavbar({ onLogin, onAdminLogin }: LandingNavbarPr
         </div>
 
         <div className="landing-navbar-right">
-          {adminAccessRevealed && (
+          {showAdminBtn && (
             <button
               className="landing-btn-admin-login"
               onClick={() => setShowAdminLogin(true)}
-              aria-label="Inicio sesión Admin"
+              aria-label="Inicio Sesion Admin"
+              title="Ingreso para Administradores"
             >
-              <ShieldAlert size={14} />
-              Inicio Sesión Admin
+              <ShieldCheck size={14} />
+              Inicio Sesion Admin
             </button>
           )}
-          <button className="landing-btn-login" onClick={() => setShowLogin(true)}>
-            Iniciar Sesión
+
+          <button className="landing-btn-login" onClick={openLogin}>
+            Iniciar sesión
           </button>
-          <button className="landing-btn-demo">
-            Solicitar Demo Gratuita
-            <ExternalLink size={12} style={{ marginLeft: 4 }} />
+
+          <button
+            className="landing-btn-demo"
+            onClick={openRegister}
+            aria-label="Comenzar gratis"
+          >
+            <span>Comenzar gratis</span>
+            <ArrowRight size={15} strokeWidth={2.5} />
           </button>
         </div>
       </nav>
 
       <LoginModal
-        isOpen={showLogin}
-        onClose={() => setShowLogin(false)}
+        isOpen={showAuthModal}
+        initialMode={authMode}
+        onClose={() => setShowAuthModal(false)}
         onLoginSuccess={() => {
-          setShowLogin(false);
+          setShowAuthModal(false);
           onLogin();
         }}
       />
