@@ -1,0 +1,136 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="850" viewBox="0 0 1400 850" role="img" aria-labelledby="title desc">
+  <title id="title">Flujo de RetailMetrics 360 entre frontend, backend y Supabase</title>
+  <desc id="desc">Diagrama de arquitectura que muestra al frontend React conectado directamente a Supabase para lecturas y conectado al backend FastAPI para autenticacion, carga de datasets y analitica. El backend persiste en Supabase y consulta Google Gemini.</desc>
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#07111f"/>
+      <stop offset="1" stop-color="#12263a"/>
+    </linearGradient>
+    <linearGradient id="frontend" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#193b61"/>
+      <stop offset="1" stop-color="#245c79"/>
+    </linearGradient>
+    <linearGradient id="backend" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#47366e"/>
+      <stop offset="1" stop-color="#704c73"/>
+    </linearGradient>
+    <linearGradient id="supabase" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#145c58"/>
+      <stop offset="1" stop-color="#1d8b72"/>
+    </linearGradient>
+    <linearGradient id="gemini" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#8a4d31"/>
+      <stop offset="1" stop-color="#c2783b"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="12" stdDeviation="14" flood-color="#000000" flood-opacity=".28"/>
+    </filter>
+    <marker id="arrow-blue" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M0,0 L12,6 L0,12 Z" fill="#70c7e8"/>
+    </marker>
+    <marker id="arrow-green" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M0,0 L12,6 L0,12 Z" fill="#7ce2b1"/>
+    </marker>
+    <marker id="arrow-orange" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M0,0 L12,6 L0,12 Z" fill="#ffbd72"/>
+    </marker>
+    <style>
+      .title { font: 700 32px Georgia, serif; fill: #f5f1e8; letter-spacing: .2px; }
+      .subtitle { font: 400 15px Arial, sans-serif; fill: #a9bdca; }
+      .card-title { font: 700 22px Arial, sans-serif; fill: #ffffff; }
+      .card-label { font: 700 12px Arial, sans-serif; fill: #b9d4df; letter-spacing: 1.8px; }
+      .item { font: 400 15px Arial, sans-serif; fill: #e8f0f2; }
+      .flow { font: 700 13px Arial, sans-serif; fill: #dff6ff; }
+      .legend { font: 400 13px Arial, sans-serif; fill: #b8cbd4; }
+    </style>
+  </defs>
+
+  <rect width="1400" height="850" fill="url(#background)"/>
+  <circle cx="1250" cy="70" r="170" fill="#285a69" opacity=".12"/>
+  <circle cx="90" cy="770" r="210" fill="#6c4466" opacity=".1"/>
+
+  <text x="80" y="72" class="title">RetailMetrics 360</text>
+  <text x="80" y="105" class="subtitle">Flujo de datos entre la experiencia web, la API y la plataforma de datos</text>
+  <line x1="80" y1="135" x2="1320" y2="135" stroke="#315064" stroke-width="1"/>
+
+  <!-- Frontend -->
+  <g filter="url(#shadow)">
+    <rect x="75" y="225" width="330" height="350" rx="14" fill="url(#frontend)" stroke="#4f8ba5" stroke-width="1.5"/>
+    <rect x="75" y="225" width="330" height="10" rx="5" fill="#70c7e8"/>
+  </g>
+  <text x="105" y="278" class="card-label">CLIENTE WEB</text>
+  <text x="105" y="315" class="card-title">Frontend React</text>
+  <text x="105" y="350" class="item">• Vite + TypeScript</text>
+  <text x="105" y="380" class="item">• Panel de analistas y admin</text>
+  <text x="105" y="410" class="item">• Carga de archivos CSV</text>
+  <text x="105" y="440" class="item">• Tablas, KPIs y comparativas</text>
+  <text x="105" y="470" class="item">• Chat analitico con IA</text>
+  <rect x="105" y="505" width="270" height="42" rx="7" fill="#102b47" opacity=".8"/>
+  <text x="125" y="531" class="flow">Supabase Client + REST API</text>
+
+  <!-- Backend -->
+  <g filter="url(#shadow)">
+    <rect x="535" y="225" width="330" height="350" rx="14" fill="url(#backend)" stroke="#9a73a1" stroke-width="1.5"/>
+    <rect x="535" y="225" width="330" height="10" rx="5" fill="#d19ac8"/>
+  </g>
+  <text x="565" y="278" class="card-label">LOGICA DE NEGOCIO</text>
+  <text x="565" y="315" class="card-title">Backend FastAPI</text>
+  <text x="565" y="350" class="item">• Autenticacion y JWT</text>
+  <text x="565" y="380" class="item">• Gestion de usuarios</text>
+  <text x="565" y="410" class="item">• Upload y procesamiento CSV</text>
+  <text x="565" y="440" class="item">• Analytics y comparacion</text>
+  <text x="565" y="470" class="item">• SQLAlchemy + servicios</text>
+  <rect x="565" y="505" width="270" height="42" rx="7" fill="#32264e" opacity=".85"/>
+  <text x="585" y="531" class="flow">API REST /api/v1</text>
+
+  <!-- Supabase -->
+  <g filter="url(#shadow)">
+    <rect x="1015" y="225" width="310" height="350" rx="14" fill="url(#supabase)" stroke="#56bd9c" stroke-width="1.5"/>
+    <rect x="1015" y="225" width="310" height="10" rx="5" fill="#7ce2b1"/>
+  </g>
+  <text x="1045" y="278" class="card-label">DATOS Y SERVICIOS</text>
+  <text x="1045" y="315" class="card-title">Supabase</text>
+  <text x="1045" y="350" class="item">• PostgreSQL multi-tenant</text>
+  <text x="1045" y="380" class="item">• Tablas de datasets</text>
+  <text x="1045" y="410" class="item">• Auth y Storage</text>
+  <text x="1045" y="440" class="item">• Metadatos y auditoria</text>
+  <text x="1045" y="470" class="item">• Lectura directa desde UI</text>
+  <rect x="1045" y="505" width="250" height="42" rx="7" fill="#0d4b48" opacity=".85"/>
+  <text x="1065" y="531" class="flow">Base de datos central</text>
+
+  <!-- Gemini -->
+  <g filter="url(#shadow)">
+    <rect x="535" y="665" width="330" height="105" rx="14" fill="url(#gemini)" stroke="#e6a45f" stroke-width="1.5"/>
+  </g>
+  <text x="565" y="704" class="card-label">INTELIGENCIA ARTIFICIAL</text>
+  <text x="565" y="739" class="card-title">Google Gemini</text>
+  <text x="565" y="762" class="item">Genera SQL y sintesis estrategicas</text>
+
+  <!-- Flow arrows -->
+  <path d="M405 300 C450 300 485 300 530 300" fill="none" stroke="#70c7e8" stroke-width="3" marker-end="url(#arrow-blue)"/>
+  <rect x="422" y="267" width="105" height="25" rx="12" fill="#173b53"/>
+  <text x="474" y="284" text-anchor="middle" class="flow">REST / Auth</text>
+
+  <path d="M405 500 C620 620 795 620 1010 500" fill="none" stroke="#70c7e8" stroke-width="3" stroke-dasharray="9 7" marker-end="url(#arrow-blue)"/>
+  <rect x="575" y="583" width="250" height="27" rx="13" fill="#173b53"/>
+  <text x="700" y="602" text-anchor="middle" class="flow">Lecturas directas de datasets</text>
+
+  <path d="M865 380 C920 380 960 380 1010 380" fill="none" stroke="#7ce2b1" stroke-width="3" marker-end="url(#arrow-green)"/>
+  <rect x="888" y="347" width="105" height="25" rx="12" fill="#15544d"/>
+  <text x="940" y="364" text-anchor="middle" class="flow">SQL / CRUD</text>
+
+  <path d="M700 575 C700 610 700 630 700 660" fill="none" stroke="#ffbd72" stroke-width="3" marker-end="url(#arrow-orange)"/>
+  <rect x="718" y="602" width="112" height="25" rx="12" fill="#663f2a"/>
+  <text x="774" y="619" text-anchor="middle" class="flow">Prompts / SQL</text>
+
+  <!-- Legend -->
+  <g transform="translate(80 690)">
+    <text x="0" y="0" class="card-label">RUTAS PRINCIPALES</text>
+    <line x1="0" y1="26" x2="38" y2="26" stroke="#70c7e8" stroke-width="3"/>
+    <text x="50" y="31" class="legend">Frontend hacia backend</text>
+    <line x1="190" y1="26" x2="228" y2="26" stroke="#7ce2b1" stroke-width="3"/>
+    <text x="240" y="31" class="legend">Persistencia y consultas</text>
+    <line x1="440" y1="26" x2="478" y2="26" stroke="#ffbd72" stroke-width="3"/>
+    <text x="490" y="31" class="legend">Analisis asistido por IA</text>
+  </g>
+</svg>

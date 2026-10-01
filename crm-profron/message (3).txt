@@ -1,0 +1,107 @@
+================================================================================
+           ESTRUCTURA EXACTA REORGANIZADA DEL FRONTEND (crm-profron)
+================================================================================
+
+crm-profron/
+├── .env                                 # Variables de entorno de Vite/Supabase
+├── index.html                           # HTML principal
+├── package.json                         # Dependencias del proyecto
+├── tsconfig.json                        # Configuración TypeScript
+├── vite.config.ts                       # Configuración del servidor de desarrollo
+│
+└── src/
+    ├── index.css                        # Variables globales (paleta HSL, tipografía, reset)
+    ├── App.css                          # Estilos de contenedores globales
+    ├── App.tsx                          # Enrutador principal de la aplicación
+    ├── main.tsx                         # Entrada React
+    │
+    │
+    ├── core/                            # ================= NÚCLEO GLOBAL =================
+    │   │                                # (Elementos transversales compartidos)
+    │   ├── components/
+    │   │   ├── ProtectedRoute.tsx       # Control de sesión de usuarios
+    │   │   └── ModuleGuard.tsx          # Validador de aprobación de acceso a módulos
+    │   │
+    │   ├── lib/
+    │   │   └── supabaseClient.ts        # Cliente de conexión con Supabase
+    │   │
+    │   └── types/
+    │       └── index.ts                 # Tipos TypeScript compartidos (User, Role, etc.)
+    │
+    │
+    └── features/                        # ============== DOMINIOS FUNCIONALES ==============
+        │
+        ├── landing/                     # 1. LANDING PAGE & AUTENTICACIÓN
+        │   ├── LandingPage.tsx          # Vista principal de la Landing Page
+        │   ├── landing.css              # Estilos visuales de la Landing
+        │   └── components/
+        │       ├── LandingNavbar.tsx    # Barra de navegación superior
+        │       ├── HeroSection.tsx      # Sección principal de bienvenida
+        │       ├── DashboardPreview.tsx # Demostración interactiva previa
+        │       ├── ModulesSection.tsx   # Presentación de módulos
+        │       ├── PillarsSection.tsx   # Pilares y ventajas
+        │       ├── PricingSection.tsx   # Tabla de precios / suscripción
+        │       ├── TestimonialsSection.tsx # Reseñas de clientes
+        │       ├── FooterLanding.tsx    # Pie de página
+        │       ├── WhatsAppBubble.tsx   # Botón flotante de WhatsApp
+        │       ├── LoginModal.tsx       # Modal de inicio de sesión / suscripción
+        │       └── AdminLoginModal.tsx  # Modal de acceso administrador
+        │
+        │
+        ├── portal-cursos/               # 2. PORTAL DE ESPECIALIDADES (GIFT CARDS)
+        │   │                            # (Pantalla intermedia donde el usuario ve las gift cards)
+        │   ├── PortalCursosPage.tsx     # Vista central con las Gift Cards
+        │   ├── portal-cursos.css        # Estilos de las Gift Cards y efectos de candado
+        │   └── components/
+        │       ├── CourseGiftCard.tsx   # Tarjeta interactiva (Estados: Bloqueado, Pendiente, Activo)
+        │       └── RequestAccessModal.tsx # Modal para solicitar aprobación al Admin
+        │
+        │
+        ├── admin/                       # 3. PANEL DE ADMINISTRACIÓN (Tus archivos actuales)
+	    |        admin_data/
+        │           │    |                        # (Todo lo del admin encapsulado en su propia carpeta)
+        │           |    ├── layout/                  # Layout del administrador
+        │           |    │   ├── AdminLayout.tsx      # Sidebar, Topbar y contenedor del Admin
+        │           |    │   └── AdminLayout.css      # Estilos visuales del Sidebar y Topbar
+        │           |    │
+        │           |    ├── pages/                   # Páginas existentes del Administrador
+        │           |    │   ├── GestionUsuarios.tsx  # Gestión de usuarios del sistema
+        │           |    │   ├── AsignacionModulos.tsx# ★ Aprobación de accesos a Big Data / Azure
+        │           |    │   ├── Workspaces.tsx       # Gestión de espacios de trabajo
+        │           |    │   ├── Tendencias.tsx       # Estrategias y tendencias de negocio
+        │           │    ├── CentroReportes.tsx   # Centro de reportes y exportaciones
+        │           |        └── CursosAdmin.tsx      # Gestión del catálogo de cursos
+        │           │
+        |        admin_microsof_azure/
+        │           ├── admin.css                # Estilos generales del panel de administración
+        │           └── CursosAdmin.css          # Estilos del módulo de cursos del admin
+        │
+        │
+        └── modules/                     # 4. SISTEMAS DEDICADOS POR ESPECIALIDAD
+            │
+            ├── big-data/                # ============ MÓDULO ACTUAL: BIG DATA ============
+            │   │                        # (Tus archivos actuales de analista reubicados aquí)
+            │   ├── layout/              # Layout propio del laboratorio de Big Data
+            │   │   ├── BigDataLayout.tsx    # Sidebar y navegación del analista
+            │   │   └── BigDataLayout.css    # Estilos del layout de Big Data
+            │   │
+            │   ├── pages/               # Páginas existentes de análisis de datos
+            │   │   ├── PerfilUsuario.tsx    # Perfil del usuario / analista
+            │   │   ├── CargaDatos.tsx       # Carga de archivos y datasets
+            │   │   ├── ObservacionDatos.tsx # Visualización de tablas y tipado de datos
+            │   │   ├── ComparacionAnalisis.tsx # Algoritmos de análisis y comparativas
+            │   │   ├── AnalystWorkspaces.tsx   # Workspaces de análisis
+            │   │   └── Informes.tsx         # Generación de informes
+            │   │
+            │   └── bigdata.css          # Estilos de Big Data (antes analyst.css)
+            │
+            │
+            └── microsoft-azure/         # ========== MÓDULO FUTURO: MICROSOFT AZURE ==========
+                │                        # (Estructura lista para cuando se creen sus archivos)
+                ├── layout/
+                │   ├── AzureLayout.tsx      # Sidebar propio de Azure
+                │   └── AzureLayout.css      # Estilos del entorno Azure
+                ├── pages/                   # Páginas dedicadas al laboratorio de Azure
+                └── azure.css                # Estilos del módulo Azure
+
+================================================================================
