@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import CourseGiftCard, { type CourseCardData } from './components/CourseGiftCard';
 import CourseAuthModal from './components/CourseAuthModal';
+import AzureLoginModal from './components/AzureLoginModal';
 import RequestAccessModal from './components/RequestAccessModal';
 import LogoutConfirmModal from '../../core/components/LogoutConfirmModal';
 import './portal-cursos.css';
@@ -17,6 +18,7 @@ export default function PortalCursosPage() {
 
   // Modals state
   const [authModalCard, setAuthModalCard] = useState<CourseCardData | null>(null);
+  const [azureLoginOpen, setAzureLoginOpen] = useState(false);
   const [requestModalCard, setRequestModalCard] = useState<CourseCardData | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -150,6 +152,12 @@ export default function PortalCursosPage() {
         return;
       }
     }
+    // Azure usa su propio modal de inicio de sesión con reconocimiento facial
+    if (card.key === 'microsoftAzure') {
+      setAzureLoginOpen(true);
+      return;
+    }
+    // Big Data usa el modal estándar con OTP
     setAuthModalCard(card);
   };
 
@@ -168,6 +176,11 @@ export default function PortalCursosPage() {
       setAuthModalCard(null);
       navigate(targetRoute);
     }
+  };
+
+  const handleAzureLoginSuccess = () => {
+    setAzureLoginOpen(false);
+    navigate('/modules/azure');
   };
 
   const handleRequestSubmitted = () => {
@@ -318,7 +331,7 @@ export default function PortalCursosPage() {
         </div>
       </main>
 
-      {/* ---- OTP & Credential Verification Modal ---- */}
+      {/* ---- OTP & Credential Verification Modal (Big Data) ---- */}
       {authModalCard && (
         <CourseAuthModal
           isOpen={true}
@@ -328,6 +341,13 @@ export default function PortalCursosPage() {
           onSuccess={handleAuthSuccess}
         />
       )}
+
+      {/* ---- Azure Login Modal (credenciales + reconocimiento facial) ---- */}
+      <AzureLoginModal
+        isOpen={azureLoginOpen}
+        onClose={() => setAzureLoginOpen(false)}
+        onSuccess={handleAzureLoginSuccess}
+      />
 
       {/* ---- Request Access Modal ---- */}
       {requestModalCard && (

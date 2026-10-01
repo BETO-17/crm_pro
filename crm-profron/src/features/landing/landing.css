@@ -3613,3 +3613,258 @@
     padding: 26px 22px;
   }
 }
+/* ─────────────────────────────────────────────────────────────────────────────
+   BOTÓN DE INICIO DE SESIÓN FACIAL — dentro de LoginModal social group
+───────────────────────────────────────────────────────────────────────────── */
+
+.split-auth-face-btn {
+  background: linear-gradient(135deg, #e8f4fd 0%, #f0f7ff 100%) !important;
+  border: 1.5px solid #0078d4 !important;
+  color: #0056b3 !important;
+  font-weight: 600;
+  position: relative;
+  overflow: hidden;
+  justify-content: flex-start;
+  gap: 10px;
+  transition: background 0.2s, box-shadow 0.2s, transform 0.15s;
+}
+.split-auth-face-btn:hover {
+  background: linear-gradient(135deg, #daeefa 0%, #e5f1fb 100%) !important;
+  box-shadow: 0 4px 16px rgba(0, 120, 212, 0.2);
+  transform: translateY(-1px);
+}
+.face-btn-icon { color: #0078d4; flex-shrink: 0; }
+.face-btn-badge {
+  margin-left: auto;
+  background: #0078d4;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 2px 7px;
+  border-radius: 100px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   AZURE FACE AUTH MODAL
+───────────────────────────────────────────────────────────────────────────── */
+
+.face-auth-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(5, 10, 20, 0.72);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  padding: 16px;
+  animation: faceOverlayIn 0.22s ease;
+}
+@keyframes faceOverlayIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.face-auth-modal {
+  background: #fff;
+  border-radius: 20px;
+  width: 100%;
+  max-width: 400px;
+  overflow: hidden;
+  box-shadow: 0 32px 80px rgba(0,0,0,0.22), 0 8px 24px rgba(0,0,0,0.1);
+  animation: faceModalIn 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes faceModalIn {
+  from { opacity: 0; transform: scale(0.94) translateY(12px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+.face-auth-header {
+  background: linear-gradient(135deg, #001f4d 0%, #003580 40%, #0056b3 100%);
+  padding: 20px 20px 18px;
+  color: #fff;
+}
+.face-auth-header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.face-auth-azure-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.2);
+  padding: 4px 10px;
+  border-radius: 100px;
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.9);
+  letter-spacing: 0.02em;
+}
+.face-auth-close {
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.18);
+  color: rgba(255,255,255,0.85);
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.18s;
+  flex-shrink: 0;
+}
+.face-auth-close:hover { background: rgba(255,255,255,0.22); color: #fff; }
+.face-auth-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #fff;
+  margin: 0 0 4px;
+  letter-spacing: -0.02em;
+}
+.face-auth-subtitle {
+  font-size: 13px;
+  color: rgba(255,255,255,0.72);
+  margin: 0;
+  line-height: 1.4;
+}
+.face-auth-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  background: #f8fafc;
+}
+.face-auth-viewport {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  background: #0a0e1a;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 2px solid #e1e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+.face-auth-viewport.scanning { border-color: #0078d4; box-shadow: 0 0 0 3px rgba(0,120,212,0.18); }
+.face-auth-viewport.vp-success { border-color: #10b981; box-shadow: 0 0 0 3px rgba(16,185,129,0.18); }
+.face-auth-viewport.vp-error { border-color: #ef4444; box-shadow: 0 0 0 3px rgba(239,68,68,0.12); }
+.face-auth-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1);
+}
+.face-auth-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 24px;
+  color: rgba(255,255,255,0.75);
+  text-align: center;
+}
+.face-auth-state p { font-size: 13px; line-height: 1.5; margin: 0; color: rgba(255,255,255,0.65); }
+.face-auth-state--error { color: #fca5a5; }
+.face-auth-state--error p { color: #fca5a5; }
+.face-auth-state--success { color: #6ee7b7; animation: faceSuccessIn 0.5s ease; }
+.face-auth-state--success p { color: #6ee7b7; font-weight: 600; font-size: 15px; }
+@keyframes faceSuccessIn {
+  0%   { transform: scale(0.8); opacity: 0; }
+  60%  { transform: scale(1.08); }
+  100% { transform: scale(1); opacity: 1; }
+}
+.face-auth-icon-ring {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: rgba(0,120,212,0.12);
+  border: 2px solid rgba(0,120,212,0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: faceRingPulse 2.5s ease-in-out infinite;
+  color: #60b4f6;
+}
+@keyframes faceRingPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(0,120,212,0.25); }
+  50%       { box-shadow: 0 0 0 12px rgba(0,120,212,0); }
+}
+.face-auth-scan-overlay { position: absolute; inset: 0; pointer-events: none; }
+.face-auth-corners { position: absolute; inset: 0; }
+.fa-corner { position: absolute; width: 22px; height: 22px; border-color: #00bcf2; border-style: solid; border-width: 0; }
+.fa-tl { top: 14px; left: 14px; border-top-width: 3px; border-left-width: 3px; border-top-left-radius: 4px; }
+.fa-tr { top: 14px; right: 14px; border-top-width: 3px; border-right-width: 3px; border-top-right-radius: 4px; }
+.fa-bl { bottom: 14px; left: 14px; border-bottom-width: 3px; border-left-width: 3px; border-bottom-left-radius: 4px; }
+.fa-br { bottom: 14px; right: 14px; border-bottom-width: 3px; border-right-width: 3px; border-bottom-right-radius: 4px; }
+.face-auth-scan-line {
+  position: absolute;
+  left: 10%; right: 10%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #00bcf2, #0078d4, #00bcf2, transparent);
+  box-shadow: 0 0 10px 2px rgba(0,188,242,0.55);
+  border-radius: 2px;
+  transition: top 0.08s linear;
+}
+.face-auth-processing {
+  position: absolute; inset: 0;
+  background: rgba(10,14,26,0.7);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 10px; color: #00bcf2; font-size: 13px; font-weight: 500;
+}
+.face-auth-spin { animation: faceSpin 1s linear infinite; }
+@keyframes faceSpin { to { transform: rotate(360deg); } }
+.face-auth-progress-wrap { height: 4px; background: #e1e8f0; border-radius: 100px; overflow: hidden; }
+.face-auth-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #0078d4, #00bcf2);
+  border-radius: 100px;
+  transition: width 0.08s linear;
+}
+.face-auth-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.face-auth-chip {
+  display: flex; align-items: center; gap: 5px;
+  background: #fff; border: 1px solid #e1e8f0;
+  padding: 4px 10px; border-radius: 100px;
+  font-size: 11px; color: #475569; font-weight: 500;
+}
+.fac-dot { width: 6px; height: 6px; border-radius: 50%; background: #10b981; flex-shrink: 0; }
+.face-auth-footer {
+  padding: 16px 20px 20px;
+  display: flex; flex-direction: column; gap: 12px;
+  background: #fff; border-top: 1px solid #f0f4f8;
+}
+.face-auth-start-btn {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  background: linear-gradient(135deg, #0056b3, #0078d4);
+  color: #fff; font-size: 14px; font-weight: 600;
+  border: none; padding: 12px 20px; border-radius: 10px;
+  cursor: pointer; transition: opacity 0.2s, transform 0.15s, box-shadow 0.2s;
+  box-shadow: 0 4px 12px rgba(0,120,212,0.35);
+}
+.face-auth-start-btn:hover { opacity: 0.92; transform: translateY(-1px); box-shadow: 0 6px 20px rgba(0,120,212,0.45); }
+.face-auth-start-btn:active { transform: translateY(0); }
+.face-auth-cancel-btn {
+  background: transparent; color: #64748b; font-size: 13px;
+  border: 1px solid #e1e8f0; padding: 10px 20px; border-radius: 10px;
+  cursor: pointer; transition: background 0.18s, color 0.18s;
+}
+.face-auth-cancel-btn:hover { background: #f8fafc; color: #1e293b; }
+.face-auth-legal { font-size: 11px; color: #94a3b8; text-align: center; margin: 0; line-height: 1.5; }
+.face-auth-legal strong { color: #64748b; }
+
+@media (max-width: 440px) {
+  .face-auth-modal { border-radius: 16px; }
+  .face-auth-header { padding: 16px 16px 14px; }
+  .face-auth-body { padding: 16px; }
+  .face-auth-footer { padding: 14px 16px 18px; }
+}

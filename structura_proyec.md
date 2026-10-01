@@ -120,56 +120,67 @@ crm_pro/
         ├── lib/                     # Librerías y clientes de terceros
         │   └── supabaseClient.ts    # Inicialización del cliente Supabase mediante claves públicas
         │
-        ├── types/                   # Definiciones de tipos TypeScript compartidos
-        │   └── index.ts             # Interfaces para User, Role, Workspace, Dataset, Activity, etc.
-        │
-        ├── components/              # Componentes comunes y de control de acceso
-        │   └── ProtectedRoute.tsx   # Wrapper para verificar autenticación y permisos de rol
-        │
-        ├── layouts/                 # Layouts envolventes por rol
-        │   ├── AdminLayout.tsx      # Sidebar, Topbar y estructura del panel de administración
-        │   ├── AdminLayout.css      # Estilos visuales del layout de administrador
-        │   ├── AnalystLayout.tsx    # Sidebar interactiva, perfil y navegación para analistas
-        │   └── AnalystLayout.css    # Estilos visuales del layout de analista
-        │
-        └── features/                # Arquitectura Feature-Based
-            │
-            ├── landing/             # Módulo público: Landing Page comercial
-            │   ├── LandingPage.tsx  # Vista unificada de la página de inicio
-            │   ├── landing.css      # Estilos premium, animaciones, gradientes y temas
-            │   └── components/      # Secciones individuales de la Landing
-            │       ├── LandingNavbar.tsx     # Barra de navegación con accesos directos
-            │       ├── HeroSection.tsx       # Sección principal de bienvenida y llamado a la acción
-            │       ├── DashboardPreview.tsx  # Demostración interactiva previa del panel
-            │       ├── ModulesSection.tsx    # Presentación de módulos clave de la plataforma
-            │       ├── PillarsSection.tsx    # Pilares tecnológicos y ventajas competitivas
-            │       ├── PricingSection.tsx    # Tabla comparativa de planes de suscripción
-            │       ├── TestimonialsSection.tsx# Reseñas de clientes empresariales
-            │       ├── FooterLanding.tsx     # Pie de página institucional y enlaces
-            │       ├── LoginModal.tsx        # Modal de inicio de sesión con flujo de código OTP
-            │       ├── AdminLoginModal.tsx   # Modal de inicio de sesión administrativo con OTP
-            │       └── WhatsAppBubble.tsx    # Botón flotante para contacto directo vía WhatsApp
-            │
-            ├── admin/               # Módulo privado: Panel de Control Administrativo
-            │   ├── admin.css        # Estilos compartidos para las vistas del administrador
-            │   └── pages/           # Vistas operativas del rol Admin
-            │       ├── GestionUsuarios.tsx   # Creación, edición, borrado y estado de usuarios
-            │       ├── AsignacionModulos.tsx # Activación/desactivación granular de permisos por usuario
-            │       ├── Workspaces.tsx        # Creación y administración de espacios multi-tenant
-            │       ├── Tendencias.tsx        # Visualización de métricas globales y volumen de actividad
-            │       └── CentroReportes.tsx    # Catálogo y control de reportes generados
-            │
-            └── analyst/             # Módulo privado: Espacio de Trabajo del Analista
-                ├── analyst.css      # Estilos avanzados para tablas, KPIs, modal y chat AI
-                └── pages/           # Vistas funcionales del flujo del analista
-                    ├── PerfilUsuario.tsx     # Configuración y visualización del perfil del usuario
-                    ├── CargaDatos.tsx        # Ingesta Drag & Drop de CSV hacia backend y Supabase
-                    ├── ObservacionDatos.tsx  # Exploración detallada de datos y consultas directas
-                    ├── ComparacionAnalisis.tsx# Comparativa multidimensional de tablas, precios y AI
-                    ├── AnalystWorkspaces.tsx # Exploración y filtrado de workspaces asignados
-                    └── Informes.tsx          # Exportación y gestión de informes analíticos
-```
+        │--- ERP/
 
+                  ---big data/
+                  │        │
+                  │        ├── types/                   # Definiciones de tipos TypeScript compartidos
+                          │   └── index.ts             # Interfaces para User, Role, Workspace, Dataset, Activity, etc.
+                          │
+                          ├── components/              # Componentes comunes y de control de acceso
+                          │   └── ProtectedRoute.tsx   # Wrapper para verificar autenticación y permisos de rol
+                          │
+                          ├── layouts/                 # Layouts envolventes por rol
+                          │   ├── AdminLayout.tsx      # Sidebar, Topbar y estructura del panel de administración
+                          │   ├── AdminLayout.css      # Estilos visuales del layout de administrador
+                          │   ├── AnalystLayout.tsx    # Sidebar interactiva, perfil y navegación para analistas
+                          │   └── AnalystLayout.css    # Estilos visuales del layout de analista
+                          │
+                          └── features/                # Arquitectura Feature-Based
+                              │
+                              ├── landing/             # Módulo público: Landing Page comercial
+                              │   ├── LandingPage.tsx  # Vista unificada de la página de inicio
+                              │   ├── landing.css      # Estilos premium, animaciones, gradientes y temas
+                              │   └── components/      # Secciones individuales de la Landing
+                              │       ├── LandingNavbar.tsx     # Barra de navegación con accesos directos
+                              │       ├── HeroSection.tsx       # Sección principal de bienvenida y llamado a la acción
+                              │       ├── DashboardPreview.tsx  # Demostración interactiva previa del panel
+                              │       ├── ModulesSection.tsx    # Presentación de módulos clave de la plataforma
+                              │       ├── PillarsSection.tsx    # Pilares tecnológicos y ventajas competitivas
+                              │       ├── PricingSection.tsx    # Tabla comparativa de planes de suscripción
+                              │       ├── TestimonialsSection.tsx# Reseñas de clientes empresariales
+                              │       ├── FooterLanding.tsx     # Pie de página institucional y enlaces
+                              │       ├── LoginModal.tsx        # Modal de inicio de sesión con flujo de código OTP
+                              │       ├── AdminLoginModal.tsx   # Modal de inicio de sesión administrativo con OTP
+                              │       └── WhatsAppBubble.tsx    # Botón flotante para contacto directo vía WhatsApp
+                              │
+                              ├── admin/               # Módulo privado: Panel de Control Administrativo
+                              │   ├── admin.css        # Estilos compartidos para las vistas del administrador
+                              │   └── pages/           # Vistas operativas del rol Admin
+                              │       ├── GestionUsuarios.tsx   # Creación, edición, borrado y estado de usuarios
+                              │       ├── AsignacionModulos.tsx # Activación/desactivación granular de permisos por usuario
+                              │       ├── Workspaces.tsx        # Creación y administración de espacios multi-tenant
+                              │       ├── Tendencias.tsx        # Visualización de métricas globales y volumen de actividad
+                              │       └── CentroReportes.tsx    # Catálogo y control de reportes generados
+                              │
+                              └── analyst/             # Módulo privado: Espacio de Trabajo del Analista
+                                  ├── analyst.css      # Estilos avanzados para tablas, KPIs, modal y chat AI
+                                  └── pages/           # Vistas funcionales del flujo del analista
+                                      ├── PerfilUsuario.tsx     # Configuración y visualización del perfil del usuario
+                                      ├── CargaDatos.tsx        # Ingesta Drag & Drop de CSV hacia backend y Supabase
+                                      ├── ObservacionDatos.tsx  # Exploración detallada de datos y consultas directas
+                                      ├── ComparacionAnalisis.tsx# Comparativa multidimensional de tablas, precios y AI
+                                      ├── AnalystWorkspaces.tsx # Exploración y filtrado de workspaces asignados
+                                      └── Informes.tsx          # Exportación y gestión de informes analíticos
+                  microsof asure/
+
+
+                        carpetas 
+
+
+
+```
+>
 ---
 
 ## 3. Desglose Minucioso de Módulos Críticos
