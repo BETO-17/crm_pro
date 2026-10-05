@@ -165,10 +165,39 @@ const mockNotificationsByModule: Record<string, NotificationItem[]> = {
       category: 'Costos',
     },
   ],
+  aws: [
+    {
+      id: 'aws-1',
+      title: 'Instancia EC2 Desplegada',
+      description: 'La instancia "erp-prod-node-01" está operativa en us-east-1a.',
+      time: 'Hace 5 min',
+      unread: true,
+      type: 'success',
+      category: 'Compute',
+    },
+    {
+      id: 'aws-2',
+      title: 'Bucket S3 Sincronizado',
+      description: 'Carga de datasets crudos completada en "erp-analytics-raw-datasets".',
+      time: 'Hace 25 min',
+      unread: true,
+      type: 'info',
+      category: 'Storage',
+    },
+    {
+      id: 'aws-3',
+      title: 'AWS Lambda Concurrencia',
+      description: 'Pico de 142 ejecuciones concurrentes procesado sin errores.',
+      time: 'Hace 1 hora',
+      unread: false,
+      type: 'success',
+      category: 'Serverless',
+    },
+  ],
 };
 
 interface NotificationBellProps {
-  module?: 'admin' | 'big-data' | 'azure';
+  module?: 'admin' | 'big-data' | 'azure' | 'aws';
   className?: string;
 }
 
@@ -180,7 +209,8 @@ export default function NotificationBell({ module: explicitModule, className = '
   // Determine current module
   const currentModule = explicitModule || (() => {
     const path = location.pathname;
-    if (path.startsWith('/modules/azure')) return 'azure';
+    if (path.startsWith('/modules/aws') || path.startsWith('/admin/aws')) return 'aws';
+    if (path.startsWith('/modules/azure') || path.startsWith('/admin/azure')) return 'azure';
     if (path.startsWith('/modules/big-data') || path.startsWith('/analyst')) return 'big-data';
     return 'admin';
   })();

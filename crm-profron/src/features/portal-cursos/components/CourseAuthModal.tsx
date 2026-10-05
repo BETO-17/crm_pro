@@ -16,7 +16,7 @@ interface CourseAuthModalProps {
   isOpen: boolean;
   onClose: () => void;
   courseTitle: string;
-  courseKey: 'bigData' | 'microsoftAzure';
+  courseKey: 'bigData' | 'microsoftAzure' | 'aws';
   onSuccess: () => void;
 }
 
@@ -179,7 +179,7 @@ export default function CourseAuthModal({
       const generated = Math.floor(100000 + Math.random() * 900000).toString();
       setDemoCode(generated);
       setStep(2);
-      if (courseKey === 'bigData') {
+      if (courseKey === 'bigData' || courseKey === 'aws') {
         setTimeout(() => otpRefs.current[0]?.focus(), 150);
       }
     }, 300);
@@ -223,7 +223,7 @@ export default function CourseAuthModal({
       return;
     }
 
-    if (courseKey === 'bigData') {
+    if (courseKey === 'bigData' || courseKey === 'aws') {
       const entered = otpDigits.join('');
       if (entered.length < 6) {
         setError('Por favor ingresa el código OTP de 6 dígitos completo.');
@@ -780,12 +780,12 @@ export default function CourseAuthModal({
               </form>
             )}
 
-            {/* STEP 2 (BIG DATA): OTP Code Verification */}
-            {step === 2 && courseKey === 'bigData' && (
+            {/* STEP 2 (BIG DATA & AWS): OTP Code Verification */}
+            {step === 2 && (courseKey === 'bigData' || courseKey === 'aws') && (
               <form onSubmit={handleStep2Submit} className="crm-auth-form">
-                <div className="crm-otp-demo-hint">
-                  <div className="crm-otp-hint-title">
-                    <Sparkles size={14} /> Código de seguridad (Demo):
+                <div className="crm-otp-demo-hint" style={courseKey === 'aws' ? { borderLeftColor: '#f59e0b' } : {}}>
+                  <div className="crm-otp-hint-title" style={courseKey === 'aws' ? { color: '#d97706' } : {}}>
+                    <Sparkles size={14} /> {courseKey === 'aws' ? 'Código de acceso AWS MFA (Demo):' : 'Código de seguridad (Demo):'}
                   </div>
                   <div className="crm-otp-hint-code-row">
                     <span className="crm-otp-code-display">{demoCode}</span>
@@ -800,7 +800,7 @@ export default function CourseAuthModal({
                 </div>
 
                 <p className="crm-otp-instruction">
-                  Ingresa el código OTP de 6 dígitos para validar tu acceso a <strong>{courseTitle}</strong>:
+                  Ingresa el código de 6 dígitos para validar tu acceso a <strong>{courseTitle}</strong>:
                 </p>
 
                 <div className="crm-otp-boxes-container" onPaste={handleOtpPaste}>
@@ -824,12 +824,17 @@ export default function CourseAuthModal({
 
                 {error && <div className="crm-auth-error-box">{error}</div>}
 
-                <button type="submit" className="crm-btn-primary" disabled={loading}>
+                <button
+                  type="submit"
+                  className="crm-btn-primary"
+                  disabled={loading}
+                  style={courseKey === 'aws' ? { background: 'linear-gradient(135deg, #0b192c, #d97706)' } : {}}
+                >
                   {loading ? (
-                    'Verificando código...'
+                    'Verificando credencial...'
                   ) : (
                     <>
-                      <span>Ingresar</span>
+                      <span>Ingresar a AWS Suite</span>
                       <ArrowRight size={17} />
                     </>
                   )}

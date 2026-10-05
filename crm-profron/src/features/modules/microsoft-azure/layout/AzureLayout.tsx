@@ -39,17 +39,8 @@ export default function AzureLayout({
     <div className="admin-layout">
       {/* ---- Sidebar ---- */}
       <aside className="admin-sidebar azure-sidebar" aria-label="Sidebar de navegación Azure">
-        <div className="sidebar-header">
-          <div className="sidebar-brand" onClick={() => navigate('/portal-cursos')} style={{ cursor: 'pointer' }} title="Volver al portal de cursos">
-            <div className="sidebar-brand-icon azure-brand-icon">
-              <Cloud size={18} />
-            </div>
-            <div className="sidebar-brand-text">
-              <span className="sidebar-brand-name">Microsoft Azure</span>
-              <span className="sidebar-brand-sub">Cloud Computing</span>
-            </div>
-          </div>
-          <div className="sidebar-profile">
+        <div className="sidebar-header" style={{ padding: '20px 16px' }}>
+          <div className="sidebar-profile" style={{ margin: 0 }}>
             <div className="sidebar-avatar" style={{ background: 'linear-gradient(135deg, #0078d4, #00bcf2)' }} aria-hidden="true">AZ</div>
             <div className="sidebar-user-info">
               <span className="sidebar-user-name">Azure Lab User</span>

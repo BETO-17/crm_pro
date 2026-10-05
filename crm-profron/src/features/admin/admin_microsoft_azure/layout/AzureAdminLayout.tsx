@@ -100,14 +100,10 @@ export default function AzureAdminLayout({ topBar }: AzureAdminLayoutProps) {
         </div>
       </aside>
 
-      {/* ---- Content Area ---- */}
+      {/* ---- Content Area (Topbar flush at the top limit) ---- */}
       <div className="admin-content">
-        {topBar && (
-          <header className="admin-topbar">
-            {topBar}
-          </header>
-        )}
-        <main className="admin-main">
+        {topBar && <header className="admin-topbar">{topBar}</header>}
+        <main className="admin-main" style={{ padding: '24px 32px', flex: 1, overflowY: 'auto' }}>
           <Outlet />
         </main>
       </div>

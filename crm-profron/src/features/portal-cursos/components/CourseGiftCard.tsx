@@ -13,17 +13,21 @@ import {
   HardDrive,
   GitMerge,
   Activity,
+  Zap,
+  Cpu,
+  Shield,
+  Network,
 } from 'lucide-react';
 
 export interface CourseFeatureItem {
   title: string;
   desc: string;
-  iconType: 'upload' | 'table' | 'compare' | 'users' | 'server' | 'storage' | 'pipeline' | 'activity';
+  iconType: 'upload' | 'table' | 'compare' | 'users' | 'server' | 'storage' | 'pipeline' | 'activity' | 'zap' | 'cpu' | 'database' | 'shield' | 'network';
 }
 
 export interface CourseCardData {
   id: string;
-  key: 'bigData' | 'microsoftAzure';
+  key: 'bigData' | 'microsoftAzure' | 'aws';
   code: string;
   title: string;
   route: string;
@@ -32,7 +36,7 @@ export interface CourseCardData {
   badge: string;
   description: string;
   featureItems: CourseFeatureItem[];
-  theme: 'navy' | 'slate';
+  theme: 'navy' | 'slate' | 'amber';
   status: 'approved' | 'pending' | 'locked';
 }
 
@@ -50,6 +54,9 @@ export default function CourseGiftCard({
   const renderHeaderIcon = () => {
     if (data.key === 'bigData') {
       return <Database size={22} />;
+    }
+    if (data.key === 'aws') {
+      return <Cpu size={22} />;
     }
     return <Cloud size={22} />;
   };
@@ -70,6 +77,16 @@ export default function CourseGiftCard({
         return <HardDrive size={16} />;
       case 'pipeline':
         return <GitMerge size={16} />;
+      case 'zap':
+        return <Zap size={16} />;
+      case 'cpu':
+        return <Cpu size={16} />;
+      case 'database':
+        return <Database size={16} />;
+      case 'shield':
+        return <Shield size={16} />;
+      case 'network':
+        return <Network size={16} />;
       case 'activity':
       default:
         return <Activity size={16} />;
