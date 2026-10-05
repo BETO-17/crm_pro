@@ -48,10 +48,31 @@ import AzurePipelinesAdmin from './features/admin/admin_microsoft_azure/pages/Az
 import AzureCostosAdmin from './features/admin/admin_microsoft_azure/pages/AzureCostosAdmin';
 import AzureSeguridadAdmin from './features/admin/admin_microsoft_azure/pages/AzureSeguridadAdmin';
 
+// Amazon Web Services (AWS) Module (Analyst / Laboratorio)
+import AwsLayout from './features/modules/aws-cloud/layout/AwsLayout';
+import AwsDashboard from './features/modules/aws-cloud/pages/AwsDashboard';
+import AwsPlanning from './features/modules/aws-cloud/pages/AwsPlanning';
+import AwsCosts from './features/modules/aws-cloud/pages/AwsCosts';
+import AwsInfrastructure from './features/modules/aws-cloud/pages/AwsInfrastructure';
+import AwsSecurity from './features/modules/aws-cloud/pages/AwsSecurity';
+import AwsNetwork from './features/modules/aws-cloud/pages/AwsNetwork';
+import AwsServicesCatalog from './features/modules/aws-cloud/pages/AwsServicesCatalog';
+
+// AWS Admin Module
+import AwsAdminLayout from './features/admin/admin_aws/layout/AwsAdminLayout';
+import AwsAdminDashboard from './features/admin/admin_aws/pages/AwsAdminDashboard';
+import AwsRecursosAdmin from './features/admin/admin_aws/pages/AwsRecursosAdmin';
+import AwsStorageAdmin from './features/admin/admin_aws/pages/AwsStorageAdmin';
+import AwsServerlessAdmin from './features/admin/admin_aws/pages/AwsServerlessAdmin';
+import AwsCostosAdmin from './features/admin/admin_aws/pages/AwsCostosAdmin';
+import AwsSeguridadAdmin from './features/admin/admin_aws/pages/AwsSeguridadAdmin';
+
 // Stylesheets
 import './features/admin/admin_data/admin.css';
 import './features/admin/admin_microsoft_azure/azure_admin.css';
+import './features/admin/admin_aws/aws_admin.css';
 import './features/modules/big-data/bigdata.css';
+import './features/modules/aws-cloud/aws.css';
 
 /** Sub-views within the Usuarios tab */
 type UsuariosSubView = 'gestion' | 'asignacion' | 'workspaces';
@@ -214,9 +235,7 @@ function App() {
   const renderAzureTopBar = () => {
     return (
       <>
-        <div className="topbar-left">
-          <span className="topbar-title">Microsoft Azure Cloud Suite</span>
-        </div>
+        <div className="topbar-left" />
         <div className="topbar-right">
           <button
             className="topbar-logout"
@@ -240,12 +259,7 @@ function App() {
   const renderAzureAdminTopBar = () => {
     return (
       <>
-        <div className="topbar-left">
-          <span className="topbar-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#0078d4' }} />
-            Azure Cloud Management Console
-          </span>
-        </div>
+        <div className="topbar-left" />
         <div className="topbar-right">
           <button
             className="topbar-logout"
@@ -259,6 +273,57 @@ function App() {
             <Settings size={16} />
           </button>
           <div className="topbar-avatar-small" aria-hidden="true" style={{ background: 'linear-gradient(135deg, #0078d4, #002050)' }}>AZ</div>
+          <button className="topbar-logout" onClick={handleLogoutClick}>
+            <LogOut size={14} />
+            Cerrar Sesión
+          </button>
+        </div>
+      </>
+    );
+  };
+
+  /* ===== AWS TOP BAR ===== */
+  const renderAwsTopBar = () => {
+    return (
+      <>
+        <div className="topbar-left" />
+        <div className="topbar-right">
+          <button
+            className="topbar-logout"
+            onClick={() => navigate('/portal-cursos')}
+            style={{ marginRight: 6 }}
+          >
+            ← Volver al Portal
+          </button>
+          <NotificationBell module="aws" />
+          <div className="topbar-avatar-small" aria-hidden="true" style={{ background: 'linear-gradient(135deg, #f59e0b, #ea580c)' }}>AW</div>
+          <button className="topbar-logout" onClick={handleLogoutClick}>
+            <LogOut size={14} />
+            Salir
+          </button>
+        </div>
+      </>
+    );
+  };
+
+  /* ===== AWS ADMIN TOP BAR ===== */
+  const renderAwsAdminTopBar = () => {
+    return (
+      <>
+        <div className="topbar-left" />
+        <div className="topbar-right">
+          <button
+            className="topbar-logout"
+            onClick={() => navigate('/portal-cursos')}
+            style={{ marginRight: 6 }}
+          >
+            ← Volver al Portal
+          </button>
+          <NotificationBell module="aws" />
+          <button className="topbar-icon-btn" aria-label="Configuración">
+            <Settings size={16} />
+          </button>
+          <div className="topbar-avatar-small" aria-hidden="true" style={{ background: 'linear-gradient(135deg, #f59e0b, #b45309)' }}>AW</div>
           <button className="topbar-logout" onClick={handleLogoutClick}>
             <LogOut size={14} />
             Cerrar Sesión
@@ -353,6 +418,27 @@ function App() {
         </Route>
       </Route>
 
+      {/* 4b. Módulo Dedicado: AMAZON WEB SERVICES (AWS) (Analyst / Laboratorio) */}
+      <Route element={<ProtectedRoute />}>
+        <Route
+          path="/modules/aws/*"
+          element={
+            <ModuleGuard moduleKey="aws">
+              <AwsLayout topBar={renderAwsTopBar()} />
+            </ModuleGuard>
+          }
+        >
+          <Route path="dashboard" element={<AwsDashboard />} />
+          <Route path="planning" element={<AwsPlanning />} />
+          <Route path="costs" element={<AwsCosts />} />
+          <Route path="infrastructure" element={<AwsInfrastructure />} />
+          <Route path="security" element={<AwsSecurity />} />
+          <Route path="network" element={<AwsNetwork />} />
+          <Route path="services" element={<AwsServicesCatalog />} />
+          <Route path="*" element={<Navigate to="dashboard" replace />} />
+        </Route>
+      </Route>
+
       {/* 5. Panel de Administrador: BIG DATA & GESTIÓN */}
       <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
         <Route path="/admin/*" element={<AdminLayout topBar={renderAdminTopBar()} sidebarFooter={renderSidebarFooter()} />}>
@@ -395,6 +481,22 @@ function App() {
           <Route path="pipelines" element={<AzurePipelinesAdmin />} />
           <Route path="costos" element={<AzureCostosAdmin />} />
           <Route path="seguridad" element={<AzureSeguridadAdmin />} />
+          <Route path="*" element={<Navigate to="dashboard" replace />} />
+        </Route>
+      </Route>
+
+      {/* 6b. Panel de Administrador Dedicado: AMAZON WEB SERVICES (AWS) */}
+      <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
+        <Route
+          path="/admin/aws/*"
+          element={<AwsAdminLayout topBar={renderAwsAdminTopBar()} />}
+        >
+          <Route path="dashboard" element={<AwsAdminDashboard />} />
+          <Route path="recursos" element={<AwsRecursosAdmin />} />
+          <Route path="storage" element={<AwsStorageAdmin />} />
+          <Route path="serverless" element={<AwsServerlessAdmin />} />
+          <Route path="costos" element={<AwsCostosAdmin />} />
+          <Route path="seguridad" element={<AwsSeguridadAdmin />} />
           <Route path="*" element={<Navigate to="dashboard" replace />} />
         </Route>
       </Route>

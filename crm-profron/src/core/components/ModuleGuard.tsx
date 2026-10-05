@@ -2,7 +2,7 @@ import { type ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
 
 interface ModuleGuardProps {
-  moduleKey: 'bigData' | 'microsoftAzure';
+  moduleKey: 'bigData' | 'microsoftAzure' | 'aws';
   children: ReactNode;
 }
 
@@ -11,7 +11,7 @@ export default function ModuleGuard({ moduleKey, children }: ModuleGuardProps) {
   const savedPermissions = localStorage.getItem('course_access_permissions');
   const permissions = savedPermissions
     ? JSON.parse(savedPermissions)
-    : { bigData: 'approved', microsoftAzure: 'locked' };
+    : { bigData: 'approved', microsoftAzure: 'locked', aws: 'approved' };
 
   const status = permissions[moduleKey];
 

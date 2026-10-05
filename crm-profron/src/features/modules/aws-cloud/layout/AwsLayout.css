@@ -1,0 +1,22 @@
+/* ==========================================
+   AwsLayout — Sidebar + Layout
+   ========================================== */
+
+.aws-sidebar {
+  background: #131924 !important;
+}
+
+.aws-brand-icon {
+  background: linear-gradient(135deg, #f59e0b, #ea580c) !important;
+}
+
+.aws-sidebar .sidebar-nav-item.active {
+  background: rgba(245, 158, 11, 0.15) !important;
+  color: #fcd34d !important;
+  border-left: 3px solid #f59e0b;
+}
+
+.aws-sidebar .sidebar-nav-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #fef08a;
+}
