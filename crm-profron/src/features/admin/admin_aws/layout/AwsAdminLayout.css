@@ -1,0 +1,22 @@
+/* ==========================================
+   AwsAdminLayout — Stylesheet
+   ========================================== */
+
+.aws-admin-sidebar {
+  background: #0d131f !important;
+}
+
+.aws-admin-brand-icon {
+  background: linear-gradient(135deg, #f59e0b, #ea580c) !important;
+}
+
+.aws-admin-sidebar .sidebar-nav-item.active {
+  background: rgba(245, 158, 11, 0.18) !important;
+  color: #fde68a !important;
+  border-left: 3px solid #f59e0b;
+}
+
+.aws-admin-sidebar .sidebar-nav-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #fef08a;
+}

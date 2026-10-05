@@ -24,14 +24,18 @@ export default function PortalCursosPage() {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   // Module permissions state in localStorage
-  const [permissions, setPermissions] = useState<{ bigData: 'approved' | 'pending' | 'locked'; microsoftAzure: 'approved' | 'pending' | 'locked' }>(() => {
+  const [permissions, setPermissions] = useState<{
+    bigData: 'approved' | 'pending' | 'locked';
+    microsoftAzure: 'approved' | 'pending' | 'locked';
+    aws: 'approved' | 'pending' | 'locked';
+  }>(() => {
     try {
       const saved = localStorage.getItem('course_access_permissions');
       if (saved) return JSON.parse(saved);
     } catch {
       // ignore
     }
-    return { bigData: 'approved', microsoftAzure: 'locked' };
+    return { bigData: 'approved', microsoftAzure: 'locked', aws: 'approved' };
   });
 
   useEffect(() => {
@@ -139,6 +143,44 @@ export default function PortalCursosPage() {
       ],
       status: isAdmin ? 'approved' : permissions.microsoftAzure,
     },
+    {
+      id: 'card-aws',
+      key: 'aws',
+      code: 'AWS-003',
+      title: 'Amazon Web Services (AWS)',
+      route: isAdmin ? '/admin/aws/dashboard' : '/modules/aws',
+      summary: isAdmin
+        ? 'Consola de clústeres EC2, buckets S3, Lambda serverless y arquitectura VPC'
+        : 'Entorno de cómputo elástico, buckets S3 y microservicios serverless',
+      category: 'Infraestructura Cloud, Serverless & Storage',
+      badge: isAdmin ? 'ADMINISTRADOR AWS' : 'ESPECIALIDAD 3',
+      description:
+        'Laboratorio en la nube de AWS para orquestación de instancias EC2, almacenamiento distribuido S3, funciones Lambda y monitoreo CloudWatch.',
+      theme: 'amber',
+      featureItems: [
+        {
+          title: 'Amazon EC2 & Compute',
+          desc: 'Instancias elásticas escalables, dimensionamiento de CPU/RAM y auto-scaling',
+          iconType: 'server',
+        },
+        {
+          title: 'Amazon S3 Storage',
+          desc: 'Buckets de alta disponibilidad para Data Lakes, backups y versionado',
+          iconType: 'storage',
+        },
+        {
+          title: 'AWS Lambda & Serverless',
+          desc: 'Ejecución de funciones orientadas a eventos y microservicios escalables',
+          iconType: 'zap',
+        },
+        {
+          title: 'CloudWatch & Monitoreo',
+          desc: 'Métricas de rendimiento en tiempo real, alarmas y logs centralizados',
+          iconType: 'activity',
+        },
+      ],
+      status: isAdmin ? 'approved' : permissions.aws || 'approved',
+    },
   ];
 
   const handleEnterClick = (card: CourseCardData) => {
@@ -149,6 +191,10 @@ export default function PortalCursosPage() {
       }
       if (card.key === 'microsoftAzure') {
         navigate('/admin/azure/dashboard');
+        return;
+      }
+      if (card.key === 'aws') {
+        navigate('/admin/aws/dashboard');
         return;
       }
     }
@@ -168,7 +214,12 @@ export default function PortalCursosPage() {
   const handleAuthSuccess = () => {
     if (!authModalCard) return;
     if (isAdmin) {
-      const targetAdmin = authModalCard.key === 'bigData' ? '/admin/dashboard' : '/admin/azure/dashboard';
+      const targetAdmin =
+        authModalCard.key === 'bigData'
+          ? '/admin/dashboard'
+          : authModalCard.key === 'aws'
+          ? '/admin/aws/dashboard'
+          : '/admin/azure/dashboard';
       setAuthModalCard(null);
       navigate(targetAdmin);
     } else {
@@ -310,22 +361,22 @@ export default function PortalCursosPage() {
           </span>
           <div style={{ display: 'flex', gap: 8 }}>
             <button
-              onClick={() => setPermissions({ bigData: 'approved', microsoftAzure: 'approved' })}
+              onClick={() => setPermissions({ bigData: 'approved', microsoftAzure: 'approved', aws: 'approved' })}
               style={{ background: 'rgba(16, 185, 129, 0.2)', color: '#6ee7b7', border: '1px solid rgba(16, 185, 129, 0.4)', padding: '4px 10px', borderRadius: 8, fontSize: 11, cursor: 'pointer', fontWeight: 600 }}
             >
-              Aprobar Ambos
+              Aprobar Todos (3 Módulos)
             </button>
             <button
-              onClick={() => setPermissions({ bigData: 'approved', microsoftAzure: 'locked' })}
-              style={{ background: 'rgba(59, 130, 246, 0.2)', color: '#93c5fd', border: '1px solid rgba(59, 130, 246, 0.4)', padding: '4px 10px', borderRadius: 8, fontSize: 11, cursor: 'pointer', fontWeight: 600 }}
+              onClick={() => setPermissions({ bigData: 'approved', microsoftAzure: 'locked', aws: 'approved' })}
+              style={{ background: 'rgba(245, 158, 11, 0.2)', color: '#fcd34d', border: '1px solid rgba(245, 158, 11, 0.4)', padding: '4px 10px', borderRadius: 8, fontSize: 11, cursor: 'pointer', fontWeight: 600 }}
             >
-              Big Data Activo / Azure Bloqueado
+              Big Data & AWS Activos / Azure Bloqueado
             </button>
             <button
-              onClick={() => setPermissions({ bigData: 'locked', microsoftAzure: 'locked' })}
+              onClick={() => setPermissions({ bigData: 'locked', microsoftAzure: 'locked', aws: 'locked' })}
               style={{ background: 'rgba(244, 63, 94, 0.2)', color: '#fca5a5', border: '1px solid rgba(244, 63, 94, 0.4)', padding: '4px 10px', borderRadius: 8, fontSize: 11, cursor: 'pointer', fontWeight: 600 }}
             >
-              Bloquear Ambos
+              Bloquear Todos
             </button>
           </div>
         </div>
