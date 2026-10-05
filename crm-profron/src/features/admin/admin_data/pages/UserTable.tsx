@@ -8,6 +8,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Users,
+  Camera,
 } from 'lucide-react';
 import UserStatusBadge from './UserStatusBadge';
 import type { Role } from '../../../../core/types';
@@ -28,6 +29,7 @@ interface UserTableProps {
   onSearchChange: (q: string) => void;
   onEdit: (user: UserRow) => void;
   onDelete: (id: string) => void;
+  onRegisterFace?: (user: UserRow) => void;
   currentPage: number;
   totalPages: number;
   onPageChange: (page: number) => void;
@@ -61,6 +63,7 @@ export default function UserTable({
   onSearchChange,
   onEdit,
   onDelete,
+  onRegisterFace,
   currentPage,
   totalPages,
   onPageChange,
@@ -153,6 +156,17 @@ export default function UserTable({
                   </td>
                   <td>
                     <div className="um-table-actions">
+                      {onRegisterFace && (
+                        <button
+                          className="um-action-btn um-action-face"
+                          onClick={() => onRegisterFace(user)}
+                          aria-label={`Registrar rostro con Amazon Rekognition para ${user.nombre}`}
+                          title="Registrar rostro con Amazon Rekognition"
+                          style={{ color: '#d97706' }}
+                        >
+                          <Camera size={14} />
+                        </button>
+                      )}
                       <button
                         className="um-action-btn um-action-edit"
                         onClick={() => onEdit(user)}

@@ -186,3 +186,67 @@ Este documento describe todos los endpoints disponibles en el backend de FastAPI
   - *KPIs:* "¿Cuál es el Lifetime Value (LTV) estimado de los clientes adquiridos en la campaña de verano?"
   - *Análisis de Cohortes:* "Genera un análisis de retención mensual para los usuarios que se registraron en enero."
   - *Segmentación:* "Identifica el top 5% de clientes por volumen de compra y describe sus categorías preferidas."
+
+---
+
+## 🧠 6. Biometría y Emociones (Amazon Rekognition)
+
+Módulo integral de visión computacional y biometría facial soportado por Amazon Rekognition.
+
+### 6.1 Inicializar Colección
+- **Método:** `POST`
+- **URL:** `/api/v1/rekognition/collection/init`
+- **Body (JSON - Opcional):**
+  ```json
+  { "collection_id": "crm-retailmetrics-faces" }
+  ```
+- **Descripción:** Verifica o crea la colección en AWS Rekognition.
+
+### 6.2 Enrolamiento Biométrico Facial (Index Faces)
+- **Método:** `POST`
+- **URL:** `/api/v1/rekognition/index-face` (o `/index-faces`)
+- **Body (JSON o Multipart FormData):**
+  ```json
+  {
+    "user_email": "usuario@retailmetrics.com",
+    "user_name": "Nombre Usuario",
+    "image_base64": "data:image/jpeg;base64,/9j/4AAQSkZJRg...",
+    "collection_id": "crm-retailmetrics-faces"
+  }
+  ```
+- **Respuesta (200 OK):** Retorna `face_id`, medidas antropométricas (`interocular_distance_mm`, `facial_symmetry_score`, `pose`, `quality`), confianza y persiste en `user_biometrics`.
+
+### 6.3 Verificación Facial y Login Biométrico
+- **Método:** `POST`
+- **URL:** `/api/v1/rekognition/verify-face`
+- **Body (JSON o Multipart):**
+  ```json
+  {
+    "image_base64": "data:image/jpeg;base64,/9j/4AAQSkZJRg...",
+    "collection_id": "crm-retailmetrics-faces",
+    "similarity_threshold": 85.0
+  }
+  ```
+- **Respuesta (200 OK):** Si hay coincidencia, retorna `matched: true`, `user_email`, `user_name`, `face_id`, `similarity`, `confidence`, y emite el `access_token` JWT.
+
+### 6.4 Detección de Emociones y Atributos Faciales
+- **Método:** `POST`
+- **URL:** `/api/v1/rekognition/detect-emotions`
+- **Body (JSON o Multipart con campo 'image'):**
+  ```json
+  {
+    "image_base64": "data:image/jpeg;base64,/9j/4AAQSkZJRg...",
+    "source_type": "live_camera"
+  }
+  ```
+- **Respuesta (200 OK):** Clasificación de las 8 emociones estándar de AWS (`HAPPY`, `CALM`, `SURPRISED`, `CONFUSED`, `SAD`, `ANGRY`, `DISGUSTED`, `FEAR`), atributos faciales (sonrisa, ojos abiertos, boca abierta, gafas, lentes de sol, rango de edad, género) y métricas de calidad.
+
+### 6.5 Consultar Estado Biométrico de Usuario
+- **Método:** `GET`
+- **URL:** `/api/v1/rekognition/users/{user_email}/status`
+- **Respuesta:** `{ "enrolled": true/false, "user_email": "...", "face_id": "...", ... }`
+
+### 6.6 Historial de Emociones
+- **Método:** `GET`
+- **URL:** `/api/v1/rekognition/emotions/history?limit=20`
+- **Respuesta:** Registro histórico de fluctuaciones emocionales registradas.

@@ -1,4 +1,5 @@
 # pyrefly: ignore [missing-import]
+from app.models.workspace import Workspace
 from typing import Optional
 # pyrefly: ignore [missing-import]
 from datetime import datetime

@@ -35,9 +35,9 @@ import ComparacionAnalisis from './features/modules/big-data/pages/ComparacionAn
 import AnalystWorkspaces from './features/modules/big-data/pages/AnalystWorkspaces';
 import Informes from './features/modules/big-data/pages/Informes';
 
-// Microsoft Azure Module (Analyst / Laboratorio)
+// Módulo de Visión Artificial & Emociones (AWS Rekognition)
 import AzureLayout from './features/modules/microsoft-azure/layout/AzureLayout';
-import AzureOverview from './features/modules/microsoft-azure/pages/AzureOverview';
+import VisualizadorEmociones from './features/modules/microsoft-azure/pages/VisualizadorEmociones';
 
 // Azure Admin Module
 import AzureAdminLayout from './features/admin/admin_microsoft_azure/layout/AzureAdminLayout';
@@ -215,7 +215,7 @@ function App() {
     return (
       <>
         <div className="topbar-left">
-          <span className="topbar-title">Microsoft Azure Cloud Suite</span>
+          <span className="topbar-title">AWS Rekognition — Visualizador de Emociones</span>
         </div>
         <div className="topbar-right">
           <button
@@ -226,7 +226,7 @@ function App() {
             ← Volver al Portal
           </button>
           <NotificationBell module="azure" />
-          <div className="topbar-avatar-small" aria-hidden="true" style={{ background: 'linear-gradient(135deg, #0078d4, #00bcf2)' }}>AZ</div>
+          <div className="topbar-avatar-small" aria-hidden="true" style={{ background: 'linear-gradient(135deg, #10b981, #0078d4)' }}>AI</div>
           <button className="topbar-logout" onClick={handleLogoutClick}>
             <LogOut size={14} />
             Salir
@@ -335,7 +335,7 @@ function App() {
         </Route>
       </Route>
 
-      {/* 4. Módulo Dedicado: MICROSOFT AZURE (Analyst / Laboratorio) */}
+      {/* 4. Módulo Dedicado: VISUALIZADOR DE EMOCIONES (AWS REKOGNITION) */}
       <Route element={<ProtectedRoute />}>
         <Route
           path="/modules/azure/*"
@@ -345,11 +345,8 @@ function App() {
             </ModuleGuard>
           }
         >
-          <Route path="overview" element={<AzureOverview />} />
-          <Route path="recursos" element={<AzureOverview />} />
-          <Route path="storage" element={<AzureOverview />} />
-          <Route path="pipelines" element={<AzureOverview />} />
-          <Route path="*" element={<Navigate to="overview" replace />} />
+          <Route path="emociones" element={<VisualizadorEmociones />} />
+          <Route path="*" element={<Navigate to="emociones" replace />} />
         </Route>
       </Route>
 

@@ -1,3 +1,3 @@
-from app.api.v1.auth import router
+from app.api.v1 import auth, users, workspaces, datasets, analytics, rekognition
 
-__all__ = ["router"]
+__all__ = ["auth", "users", "workspaces", "datasets", "analytics", "rekognition"]

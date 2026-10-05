@@ -5,16 +5,19 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.core.database import Base, engine, SessionLocal
-from app.api.v1 import auth, users, workspaces, datasets, analytics
+from app.api.v1 import auth, users, workspaces, datasets, analytics, rekognition
 from app.models.user import User, UserWorkspace
 from app.models.workspace import Workspace
 from app.core.security import get_password_hash
 
-# Note: In production, migrations with Alembic should be used instead of Base.metadata.create_all
 # Base.metadata.create_all(bind=engine)
 
 def seed_defaults():
-    db: Session = SessionLocal()
+    try:
+        db: Session = SessionLocal()
+    except Exception as e:
+        print(f"Warning: Database engine connection failed: {e}")
+        return
     try:
         # Create default admin user if it doesn't exist
         admin_email = "luisalbertohuaman419@gmail.com"
@@ -58,11 +61,21 @@ def seed_defaults():
             db.commit()
             print("Default workspace assigned to admin.")
             
+    except Exception as e:
+        print(f"Warning: Database seeding failed: {e}")
     finally:
-        db.close()
+        try:
+            db.close()
+        except Exception:
+            pass
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    try:
+        Base.metadata.create_all(bind=engine)
+        print("Database schema verified.")
+    except Exception as e:
+        print(f"Notice: Database schema creation skipped or offline: {e}")
     seed_defaults()
     yield
     pass
@@ -70,7 +83,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title=settings.APP_NAME,
     version="1.0.0",
-    description="RetailMetrics 360 API with OTP Authentication",
+    description="RetailMetrics 360 API with Amazon Rekognition Biometrics & Analytics",
     lifespan=lifespan
 )
 
@@ -87,6 +100,7 @@ app.include_router(users.router, prefix="/api/v1/users", tags=["users"])
 app.include_router(workspaces.router, prefix="/api/v1/workspaces", tags=["workspaces"])
 app.include_router(datasets.router, prefix="/api/v1/datasets", tags=["datasets"])
 app.include_router(analytics.router, prefix="/api/v1/analytics", tags=["analytics"])
+app.include_router(rekognition.router, prefix="/api/v1/rekognition", tags=["rekognition"])
 
 @app.get("/")
 def read_root():

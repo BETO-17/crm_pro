@@ -1321,6 +1321,7 @@
   align-items: center;
   justify-content: center;
   padding: 16px;
+  overflow-y: auto;
   animation: azureOverlayIn 0.25s ease;
 }
 
@@ -1334,8 +1335,10 @@
   position: relative;
   display: flex;
   width: 100%;
-  max-width: 900px;
-  min-height: 580px;
+  max-width: 920px;
+  height: min(92vh, 820px);
+  max-height: 92vh;
+  min-height: 520px;
   border-radius: 20px;
   overflow: hidden;
   box-shadow:
@@ -1523,18 +1526,43 @@
   flex: 1;
   background: #f8fafd;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  padding: 40px 36px;
+  justify-content: flex-start;
+  padding: 32px 32px 36px 32px;
   overflow-y: auto;
+  overflow-x: hidden;
+  height: 100%;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+.azure-login-form-panel::-webkit-scrollbar {
+  width: 7px;
+}
+
+.azure-login-form-panel::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.02);
+  border-radius: 8px;
+}
+
+.azure-login-form-panel::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 8px;
+}
+
+.azure-login-form-panel::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }
 
 .azure-login-form-inner {
   width: 100%;
-  max-width: 360px;
+  max-width: 380px;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px;
+  margin: auto 0;
+  padding-bottom: 20px;
 }
 
 /* ── Step indicator ──────────────────────────────────────────────────────── */
@@ -1850,14 +1878,15 @@
 .azure-face-active {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 12px;
+  gap: 10px;
+  padding: 10px;
 }
 
 .azure-face-video-wrapper {
   position: relative;
   width: 100%;
   aspect-ratio: 4/3;
+  max-height: 220px;
   border-radius: 10px;
   overflow: hidden;
   background: #000;
@@ -2040,16 +2069,281 @@
   margin-top: 4px;
 }
 
+/* ── Pestañas de modo: Inicio de Sesión / Registrar Rostro ───────────────── */
+.azure-auth-tabs {
+  display: flex;
+  background: #f1f5f9;
+  padding: 4px;
+  border-radius: 10px;
+  gap: 4px;
+  margin-bottom: 20px;
+  border: 1px solid #e2e8f0;
+}
+
+.azure-auth-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 8px 12px;
+  border-radius: 7px;
+  font-size: 12.5px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  background: transparent;
+  color: #64748b;
+  transition: all 0.18s ease;
+}
+
+.azure-auth-tab:hover:not(.active) {
+  background: rgba(255, 255, 255, 0.6);
+  color: #1e293b;
+}
+
+.azure-auth-tab.active {
+  background: #ffffff;
+  color: #0078d4;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.azure-auth-tab-badge {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 12px;
+  background: #ff9900;
+  color: #ffffff;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+
+/* ── Insignia de Servicio Amazon Rekognition ──────────────────────────────── */
+.rekog-provider-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: rgba(255, 153, 0, 0.1);
+  border: 1px solid rgba(255, 153, 0, 0.35);
+  color: #d97706;
+  font-size: 11px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.rekog-provider-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #ff9900;
+  box-shadow: 0 0 6px rgba(255, 153, 0, 0.8);
+}
+
+/* ── HUD y Overlay de Medición Facial ────────────────────────────────────── */
+.rekog-hud-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 4;
+}
+
+.rekog-hud-svg {
+  width: 100%;
+  height: 100%;
+}
+
+.rekog-scan-pulse {
+  animation: rekogPulseRing 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes rekogPulseRing {
+  0%, 100% { opacity: 0.3; transform: scale(0.98); }
+  50% { opacity: 0.8; transform: scale(1.02); }
+}
+
+/* Panel de Medidas Biométricas */
+.rekog-measurements-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.rekog-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.rekog-panel-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #1e293b;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.rekog-panel-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: #16a34a;
+  font-weight: 600;
+}
+
+.rekog-grid-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.rekog-metric-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  transition: border-color 0.2s ease;
+}
+
+.rekog-metric-card:hover {
+  border-color: #93c5fd;
+}
+
+.rekog-metric-label {
+  font-size: 10.5px;
+  color: #64748b;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.rekog-metric-val {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+  font-family: monospace;
+}
+
+.rekog-metric-sub {
+  font-size: 10px;
+  color: #059669;
+  font-weight: 500;
+}
+
+/* Tarjeta de Éxito en Registro con Amazon Rekognition */
+.rekog-success-card {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(0, 120, 212, 0.08));
+  border: 1.5px solid rgba(16, 185, 129, 0.35);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 6px;
+}
+
+.rekog-success-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.rekog-success-icon-wrap {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #10b981;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.rekog-success-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #065f46;
+  margin: 0;
+}
+
+.rekog-success-desc {
+  font-size: 11.5px;
+  color: #047857;
+  margin: 0;
+}
+
+.rekog-data-rows {
+  background: #ffffff;
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  border-radius: 8px;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 11px;
+}
+
+.rekog-data-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: #475569;
+}
+
+.rekog-data-val {
+  font-weight: 700;
+  color: #0f172a;
+  font-family: monospace;
+}
+
+.rekog-switch-link {
+  display: block;
+  text-align: center;
+  margin-top: 14px;
+  font-size: 12px;
+  color: #0078d4;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  transition: text-decoration 0.2s ease;
+  width: 100%;
+}
+
+.rekog-switch-link:hover {
+  text-decoration: underline;
+}
+
 /* ── Responsive ──────────────────────────────────────────────────────────── */
 @media (max-width: 680px) {
   .azure-login-brand-panel {
     display: none;
   }
   .azure-login-form-panel {
-    padding: 32px 20px;
+    padding: 24px 16px 32px 16px;
   }
   .azure-login-container {
-    max-width: 420px;
+    max-width: 440px;
+    height: 94vh;
+    max-height: 94vh;
     min-height: unset;
+  }
+  .rekog-grid-metrics {
+    grid-template-columns: 1fr;
   }
 }

@@ -1,13 +1,11 @@
 import { type ReactNode } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import {
-  Cloud,
-  Server,
-  Database,
-  Layers,
+  Smile,
   Settings,
   HelpCircle,
   ArrowLeft,
+  Sparkles,
 } from 'lucide-react';
 import '../../../admin/admin_data/layout/AdminLayout.css';
 import './AzureLayout.css';
@@ -17,10 +15,7 @@ interface AzureLayoutProps {
 }
 
 const navItems = [
-  { id: 'overview', label: 'Azure Overview', icon: Cloud },
-  { id: 'recursos', label: 'Recursos Cloud', icon: Server },
-  { id: 'storage', label: 'Blob Storage', icon: Database },
-  { id: 'pipelines', label: 'Data Factory', icon: Layers },
+  { id: 'emociones', label: 'Visualizador de Emociones', icon: Smile },
 ];
 
 export default function AzureLayout({
@@ -30,30 +25,28 @@ export default function AzureLayout({
   const location = useLocation();
 
   const path = location.pathname;
-  let activeView = 'overview';
-  if (path.includes('/recursos')) activeView = 'recursos';
-  if (path.includes('/storage')) activeView = 'storage';
-  if (path.includes('/pipelines')) activeView = 'pipelines';
+  let activeView = 'emociones';
+  if (path.includes('/emociones')) activeView = 'emociones';
 
   return (
     <div className="admin-layout">
       {/* ---- Sidebar ---- */}
-      <aside className="admin-sidebar azure-sidebar" aria-label="Sidebar de navegación Azure">
+      <aside className="admin-sidebar azure-sidebar" aria-label="Sidebar de navegación de Emociones">
         <div className="sidebar-header">
           <div className="sidebar-brand" onClick={() => navigate('/portal-cursos')} style={{ cursor: 'pointer' }} title="Volver al portal de cursos">
-            <div className="sidebar-brand-icon azure-brand-icon">
-              <Cloud size={18} />
+            <div className="sidebar-brand-icon azure-brand-icon" style={{ background: 'linear-gradient(135deg, #10b981, #0078d4)' }}>
+              <Sparkles size={18} />
             </div>
             <div className="sidebar-brand-text">
-              <span className="sidebar-brand-name">Microsoft Azure</span>
-              <span className="sidebar-brand-sub">Cloud Computing</span>
+              <span className="sidebar-brand-name">AWS Rekognition</span>
+              <span className="sidebar-brand-sub">Emotions & Face AI</span>
             </div>
           </div>
           <div className="sidebar-profile">
-            <div className="sidebar-avatar" style={{ background: 'linear-gradient(135deg, #0078d4, #00bcf2)' }} aria-hidden="true">AZ</div>
+            <div className="sidebar-avatar" style={{ background: 'linear-gradient(135deg, #10b981, #0078d4)' }} aria-hidden="true">AI</div>
             <div className="sidebar-user-info">
-              <span className="sidebar-user-name">Azure Lab User</span>
-              <span className="sidebar-user-role">Cloud Architect</span>
+              <span className="sidebar-user-name">Analista Biométrico</span>
+              <span className="sidebar-user-role">Face AI Specialist</span>
             </div>
           </div>
         </div>

@@ -6,6 +6,7 @@ from app.models.report import Report, ReportSchedule
 from app.models.audit import AuditLog
 from app.models.notification import Notification
 from app.models.dashboard import UserDashboardConfig
+from app.models.biometrics import UserBiometrics, EmotionLog
 
 __all__ = [
     "Base",
@@ -20,5 +21,7 @@ __all__ = [
     "ReportSchedule",
     "AuditLog",
     "Notification",
-    "UserDashboardConfig"
+    "UserDashboardConfig",
+    "UserBiometrics",
+    "EmotionLog"
 ]

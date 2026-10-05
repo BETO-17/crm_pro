@@ -15,6 +15,7 @@ import {
 import type { Role } from '../../../../core/types';
 import UserTable, { type UserRow } from './UserTable';
 import UserModal, { type UserFormData } from './UserModal';
+import AzureLoginModal from '../../../portal-cursos/components/AzureLoginModal';
 
 const PAGE_SIZE = 8;
 
@@ -106,6 +107,7 @@ export default function GestionUsuarios() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editUser, setEditUser] = useState<UserRow | null>(null);
+  const [faceModalUser, setFaceModalUser] = useState<UserRow | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [toast, setToast] = useState<Toast | null>(null);
@@ -428,6 +430,7 @@ export default function GestionUsuarios() {
           onSearchChange={setSearchQuery}
           onEdit={handleOpenEdit}
           onDelete={handleDelete}
+          onRegisterFace={setFaceModalUser}
           currentPage={currentPage}
           totalPages={totalPages}
           onPageChange={setCurrentPage}
@@ -445,6 +448,22 @@ export default function GestionUsuarios() {
             ? { id: editUser.id, nombre: editUser.nombre, correo: editUser.correo, rol: editUser.rol }
             : null
         }
+      />
+
+      {/* Modal de Registro y Medidas Biométricas (Amazon Rekognition) */}
+      <AzureLoginModal
+        isOpen={Boolean(faceModalUser)}
+        onClose={() => setFaceModalUser(null)}
+        onSuccess={() => {
+          const userName = faceModalUser?.nombre || 'Usuario';
+          setFaceModalUser(null);
+          showToast(`Rostro de ${userName} registrado con éxito en Amazon Rekognition.`, 'success');
+        }}
+        initialMode="register"
+        initialUser={{
+          nombre: faceModalUser?.nombre,
+          correo: faceModalUser?.correo,
+        }}
       />
     </>
   );

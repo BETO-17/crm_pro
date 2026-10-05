@@ -105,36 +105,36 @@ export default function PortalCursosPage() {
       id: 'card-azure',
       key: 'microsoftAzure',
       code: 'AZC-002',
-      title: 'Microsoft Azure Cloud Platform',
+      title: 'Visualizador de Emociones (AWS Rekognition)',
       route: isAdmin ? '/admin/azure/dashboard' : '/modules/azure',
       summary: isAdmin
-        ? 'Consola de gestión de infraestructura en la nube, VMs y data factory'
-        : 'Entorno de infraestructura en la nube y pipelines',
-      category: 'Infraestructura Cloud & Data Factory',
-      badge: isAdmin ? 'ADMINISTRADOR AZURE' : 'ESPECIALIDAD 2',
+        ? 'Consola de visión computacional y detección de emociones con AWS Rekognition'
+        : 'Suite de análisis biométrico y visualización de emociones en tiempo real',
+      category: 'Visión Artificial & Biometría Facial',
+      badge: isAdmin ? 'ADMINISTRADOR REKOGNITION' : 'ESPECIALIDAD 2',
       description:
-        'Laboratorio en la nube para aprovisionamiento de recursos computacionales, almacenamiento Blob Storage y canalizaciones de orquestación de datos.',
+        'Entorno de visión computacional y biometría para la detección y clasificación de 8 emociones humanas en tiempo real con Amazon Rekognition.',
       theme: 'slate',
       featureItems: [
         {
-          title: 'Infraestructura Cloud',
-          desc: 'Gestión de máquinas virtuales, redes y recursos escalables',
-          iconType: 'server',
+          title: 'Visualizador de Emociones',
+          desc: 'Clasificación de 8 emociones canónicas de AWS Rekognition en vivo',
+          iconType: 'activity',
         },
         {
-          title: 'Blob Storage',
-          desc: 'Almacenamiento de objetos para archivos masivos y backups',
-          iconType: 'storage',
-        },
-        {
-          title: 'Pipelines de Datos',
-          desc: 'Orquestación de flujos ETL con monitoreo en tiempo real',
+          title: 'Detección en Tiempo Real',
+          desc: 'Análisis mediante cámara web con bounding box dinámico y certeza AWS',
           iconType: 'pipeline',
         },
         {
-          title: 'Monitoreo de Cómputo',
-          desc: 'Métricas de rendimiento, alertas y análisis de capacidad',
-          iconType: 'activity',
+          title: 'Atributos Faciales',
+          desc: 'Detección de sonrisa, ojos abiertos, gafas y rango etario estimado',
+          iconType: 'storage',
+        },
+        {
+          title: 'Historial Emocional',
+          desc: 'Registro cronológico de fluctuaciones emocionales y exportación',
+          iconType: 'server',
         },
       ],
       status: isAdmin ? 'approved' : permissions.microsoftAzure,
