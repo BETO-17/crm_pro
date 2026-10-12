@@ -15,10 +15,13 @@ import {
   ChevronDown,
   ChevronUp,
   Network,
+  Download,
+  FileJson,
 } from 'lucide-react';
 import type { CloudProposal } from '../types/awsTypes';
 import { awsServicesCatalog } from '../data/awsServicesData';
 import { useAws } from '../context/AwsContext';
+import { downloadFossflowDiagram } from '../utils/fossflowExport';
 import AwsProjectAnalyzer from '../components/AwsProjectAnalyzer';
 import '../aws.css';
 
@@ -84,15 +87,20 @@ export default function AwsPlanning() {
   } = useAws();
 
   const navigate = useNavigate();
-  const [toastMsg, setToastMsg] = useState<string | null>(null);
-  const [toastAction, setToastAction] = useState<{ label: string; onClick: () => void } | null>(null);
+  interface ToastState {
+    msg: string;
+    action?: { label: string; onClick: () => void };
+    proposal?: CloudProposal;
+    isRegistration?: boolean;
+  }
+  const [toast, setToast] = useState<ToastState | null>(null);
   const [selectedDetailProp, setSelectedDetailProp] = useState<CloudProposal | null>(null);
   const [editingProposalId, setEditingProposalId] = useState<string | null>(null);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
 
   // Estado del Analizador de Proyectos
   const [isAnalyzerOpen, setIsAnalyzerOpen] = useState(false);
-  const [cameFromAnalyzer, setCameFromAnalyzer] = useState(false);
+  const [_cameFromAnalyzer, setCameFromAnalyzer] = useState(false);
 
   // Form Fields - All start completely empty / unselected by default
   const [solutionName, setSolutionName] = useState('');
@@ -113,13 +121,31 @@ export default function AwsPlanning() {
     }
   }, [proposal]);
 
-  const showToast = (msg: string, action?: { label: string; onClick: () => void }) => {
-    setToastMsg(msg);
-    setToastAction(action || null);
+  const showToast = (
+    msg: string,
+    actionOrProp?: { label: string; onClick: () => void } | CloudProposal,
+    isRegistration?: boolean
+  ) => {
+    let proposalObj: CloudProposal | undefined;
+    let actionObj: { label: string; onClick: () => void } | undefined;
+
+    if (actionOrProp && 'solutionName' in actionOrProp) {
+      proposalObj = actionOrProp as CloudProposal;
+    } else if (actionOrProp && 'onClick' in actionOrProp) {
+      actionObj = actionOrProp as { label: string; onClick: () => void };
+    }
+
+    setToast({
+      msg,
+      action: actionObj,
+      proposal: proposalObj,
+      isRegistration: !!isRegistration,
+    });
+
+    const duration = isRegistration ? 8500 : (actionObj ? 6500 : 3500);
     setTimeout(() => {
-      setToastMsg(null);
-      setToastAction(null);
-    }, action ? 6500 : 3500);
+      setToast((prev) => (prev?.msg === msg ? null : prev));
+    }, duration);
   };
 
   const handleGoToDiagram = () => {
@@ -295,27 +321,26 @@ export default function AwsPlanning() {
       showToast(`Propuesta "${solutionName.trim()}" actualizada correctamente.`);
       handleCancelEdit();
     } else {
-      createProposal({
+      const newProp: CloudProposal = {
+        id: `prop-${Date.now()}`,
         solutionName: solutionName.trim(),
         appType: appType as CloudProposal['appType'],
         description: description.trim(),
         region,
         estimatedUsers: usersNum,
         availabilityLevel: availabilityLevel as CloudProposal['availabilityLevel'],
-        selectedServices: services,
+        selectedServices: [...services],
+        services: [...services],
         migrationGoal: migrationGoal as CloudProposal['migrationGoal'],
         monthlyBudget: calculatedMonthly,
         annualBudget: calculatedAnnual,
         status: 'Aprobada',
-      });
+        createdAt: new Date().toISOString(),
+      };
 
-      showToast(
-        `Propuesta "${solutionName.trim()}" registrada y sincronizada con la suite Cloud.`,
-        {
-          label: 'Generar diagrama',
-          onClick: handleGoToDiagram,
-        }
-      );
+      createProposal(newProp);
+
+      showToast('Propuesta registrada', newProp, true);
       setSolutionName('');
       setAppType('');
       setRegion('');
@@ -339,7 +364,7 @@ export default function AwsPlanning() {
   return (
     <div className="aws-container">
       {/* Toast Alert */}
-      {toastMsg && (
+      {toast && (
         <div
           style={{
             position: 'fixed',
@@ -347,8 +372,8 @@ export default function AwsPlanning() {
             right: 20,
             background: '#0f172a',
             border: '1px solid #2563eb',
-            color: '#bfdbfe',
-            padding: '12px 20px',
+            color: '#ffffff',
+            padding: '12px 18px',
             borderRadius: 12,
             boxShadow: '0 10px 30px rgba(0,0,0,0.3)',
             zIndex: 9999,
@@ -357,15 +382,64 @@ export default function AwsPlanning() {
             display: 'flex',
             alignItems: 'center',
             gap: 12,
-            maxWidth: 500,
+            maxWidth: 580,
           }}
         >
           <Sparkles size={16} color="#60a5fa" style={{ flexShrink: 0 }} />
-          <span style={{ flex: 1 }}>{toastMsg}</span>
-          {toastAction && (
+          <span style={{ flex: 1, color: '#f1f5f9' }}>{toast.msg}</span>
+
+          {toast.isRegistration && toast.proposal && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+              <button
+                type="button"
+                onClick={() => downloadFossflowDiagram(toast.proposal!, awsServicesCatalog)}
+                style={{
+                  background: '#2563eb',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: 6,
+                  padding: '5px 11px',
+                  fontSize: 11.5,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 5,
+                  boxShadow: '0 1px 3px rgba(37,99,235,0.4)',
+                }}
+              >
+                <Download size={13} />
+                Descargar diagrama
+              </button>
+              <button
+                type="button"
+                onClick={handleGoToDiagram}
+                style={{
+                  background: '#334155',
+                  color: '#f8fafc',
+                  border: '1px solid #475569',
+                  borderRadius: 6,
+                  padding: '5px 11px',
+                  fontSize: 11.5,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 5,
+                }}
+              >
+                <Network size={13} />
+                Ir al editor
+              </button>
+            </div>
+          )}
+
+          {toast.action && !toast.isRegistration && (
             <button
               type="button"
-              onClick={toastAction.onClick}
+              onClick={toast.action.onClick}
               style={{
                 background: '#2563eb',
                 color: '#ffffff',
@@ -382,9 +456,26 @@ export default function AwsPlanning() {
               }}
             >
               <Network size={13} />
-              {toastAction.label}
+              {toast.action.label}
             </button>
           )}
+
+          <button
+            type="button"
+            onClick={() => setToast(null)}
+            title="Cerrar notificación"
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#94a3b8',
+              cursor: 'pointer',
+              padding: 2,
+              display: 'flex',
+              alignItems: 'center',
+            }}
+          >
+            <X size={15} />
+          </button>
         </div>
       )}
 
@@ -1012,8 +1103,8 @@ export default function AwsPlanning() {
                         </span>
                       </div>
 
-                      {/* Right Column: Actions (Eye, Edit, Hacer Activa button, Trash) */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      {/* Right Column: Actions (Eye, Edit, Hacer Activa button, Diagrama, JSON, Trash) */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                         {/* Eye Icon (Ver Detalles) */}
                         <button
                           type="button"
@@ -1130,6 +1221,51 @@ export default function AwsPlanning() {
                         >
                           <Network size={12} /> Diagrama
                         </button>
+
+                        {/* Botón Descargar diagrama (.json) */}
+                        {(() => {
+                          const propServices = prop.selectedServices || prop.services || [];
+                          const hasServices = propServices.length > 0;
+                          return (
+                            <button
+                              type="button"
+                              disabled={!hasServices}
+                              onClick={() => {
+                                if (hasServices) {
+                                  downloadFossflowDiagram(prop, awsServicesCatalog);
+                                }
+                              }}
+                              title={
+                                hasServices
+                                  ? 'Descargar diagrama (.json)'
+                                  : 'Agrega servicios a tu propuesta para generar el diagrama'
+                              }
+                              style={{
+                                background: hasServices ? '#eff6ff' : '#f8fafc',
+                                border: `1px solid ${hasServices ? '#bfdbfe' : '#e2e8f0'}`,
+                                color: hasServices ? '#2563eb' : '#94a3b8',
+                                padding: '3px 8px',
+                                borderRadius: 6,
+                                fontSize: 11,
+                                fontWeight: 600,
+                                cursor: hasServices ? 'pointer' : 'not-allowed',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 4,
+                                opacity: hasServices ? 1 : 0.5,
+                                transition: 'all 0.15s ease',
+                              }}
+                              onMouseEnter={(e) => {
+                                if (hasServices) e.currentTarget.style.background = '#dbeafe';
+                              }}
+                              onMouseLeave={(e) => {
+                                if (hasServices) e.currentTarget.style.background = '#eff6ff';
+                              }}
+                            >
+                              <FileJson size={13} /> JSON
+                            </button>
+                          );
+                        })()}
 
                         {/* Trash Icon (Eliminar) */}
                         <button

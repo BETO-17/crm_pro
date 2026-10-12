@@ -60,7 +60,11 @@ export interface CloudProposal {
   annualBudget: number;
   createdAt: string;
   status: 'Aprobada' | 'En Revisión' | 'Borrador' | 'Rechazada' | 'Requiere Ajustes';
+  services?: string[]; // Alias compatible para selectedServices
 }
+
+export type AwsProposal = CloudProposal;
+export type AwsServiceItem = AwsService;
 
 export interface CostSimulationItem {
   id: string;

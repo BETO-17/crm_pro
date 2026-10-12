@@ -678,7 +678,7 @@ export default function AwsProjectAnalyzer({ onApplyToProposal }: AwsProjectAnal
                 • {analysisResult.filesAnalyzed} archivo{analysisResult.filesAnalyzed === 1 ? '' : 's'} analizado{analysisResult.filesAnalyzed === 1 ? '' : 's'}
               </span>
             </div>
-            <StatusBadge status="neutral" label="Análisis por reglas" />
+            <StatusBadge variant="neutral">Análisis por reglas</StatusBadge>
           </div>
 
           {/* 2. Qué detectamos */}
