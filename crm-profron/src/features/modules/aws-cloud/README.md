@@ -25,6 +25,7 @@ Basado en las dependencias oficiales del proyecto (`package.json`):
 | **@amcharts/amcharts5** | `^5.21.0` | Motor gráfico para la esfera orbital 3D interactiva de la infraestructura global. |
 | **@amcharts/amcharts5-geodata** | `^5.1.6` | Coordenadas vectoriales de geolocalización mundial (`worldLow`). |
 | **Three.js** | `^0.186.1` | Renderizado 3D WebGL complementario. |
+| **FossFLOW** | *MIT License* | Editor de diagramas y topologías isométricas (integración en pestaña Diseñar mi arquitectura). |
 | **Vanilla CSS & Tokens** | *Estándar* | Diseño responsive fluido, variables de color y breakpoints adaptativos. |
 
 ---

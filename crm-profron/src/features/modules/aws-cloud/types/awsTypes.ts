@@ -117,3 +117,45 @@ export interface NetworkNodeInfo {
 }
 
 export type { RegionOperationalStatus, RegionStatusDetails } from '../data/awsRegionsData';
+
+// ==========================================
+// Tipos para el Analizador de Migración a AWS
+// ==========================================
+
+export type AnalyzerInput =
+  | { kind: 'zip'; file: File }
+  | { kind: 'github'; url: string }
+  | { kind: 'document'; file: File | { name: string; text: string } };
+
+export interface DetectedTech {
+  id: string;
+  name: string;
+  category: 'frontend' | 'backend' | 'database' | 'storage' | 'container' | 'other';
+  evidence: {
+    file: string;
+    match: string;
+  };
+}
+
+export interface ServiceRecommendation {
+  serviceId: string;
+  reason: string;
+  triggeredBy: string[];
+}
+
+export interface UnsupportedTech {
+  name: string;
+  suggestedAwsService: string;
+  note: string;
+}
+
+export interface AnalysisResult {
+  source: string;
+  filesAnalyzed: number;
+  detected: DetectedTech[];
+  recommendations: ServiceRecommendation[];
+  unsupported: UnsupportedTech[];
+  suggestedAppType: string;
+  suggestedDescription: string;
+  warnings: string[];
+}

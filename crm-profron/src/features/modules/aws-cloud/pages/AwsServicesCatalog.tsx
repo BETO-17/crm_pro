@@ -17,14 +17,18 @@ const categories: ('Todas' | ServiceCategory)[] = [
   'Monitoreo y Gestión',
 ];
 
+type StatusFilter = 'Todos' | 'En propuesta' | 'Disponibles';
+
 export default function AwsServicesCatalog() {
   const { deployedServices } = useAws();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<'Todas' | ServiceCategory>('Todas');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('Todos');
 
   const inArchitectureCount = awsServicesCatalog.filter((svc) =>
     deployedServices.some((code) => code.toLowerCase() === svc.codeName.toLowerCase())
   ).length;
+  const availableCount = awsServicesCatalog.length - inArchitectureCount;
 
   const getCategoryCount = (cat: 'Todas' | ServiceCategory): number => {
     if (cat === 'Todas') return awsServicesCatalog.length;
@@ -32,13 +36,18 @@ export default function AwsServicesCatalog() {
   };
 
   const filteredServices = awsServicesCatalog.filter((svc) => {
+    const isDeployed = deployedServices.some((code) => code.toLowerCase() === svc.codeName.toLowerCase());
+    const matchesStatus =
+      statusFilter === 'Todos' ||
+      (statusFilter === 'En propuesta' && isDeployed) ||
+      (statusFilter === 'Disponibles' && !isDeployed);
     const matchesCategory = selectedCategory === 'Todas' || svc.category === selectedCategory;
     const matchesSearch =
       svc.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       svc.codeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       svc.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (svc.mainFunction && svc.mainFunction.toLowerCase().includes(searchTerm.toLowerCase()));
-    return matchesCategory && matchesSearch;
+    return matchesStatus && matchesCategory && matchesSearch;
   });
 
   return (
@@ -78,8 +87,37 @@ export default function AwsServicesCatalog() {
           boxShadow: '0 2px 6px rgba(0,0,0,0.02)',
         }}
       >
+        {/* Filtro Todos · En propuesta · Disponibles con conteos */}
+        <div style={{ display: 'inline-flex', background: '#f1f5f9', padding: 3, borderRadius: 10, border: '1px solid #e2e8f0', gap: 3 }}>
+          {(['Todos', 'En propuesta', 'Disponibles'] as StatusFilter[]).map((tab) => {
+            const count = tab === 'Todos' ? awsServicesCatalog.length : tab === 'En propuesta' ? inArchitectureCount : availableCount;
+            const isSelected = statusFilter === tab;
+            return (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => setStatusFilter(tab)}
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: 7,
+                  fontSize: 12,
+                  fontWeight: 600,
+                  border: 'none',
+                  cursor: 'pointer',
+                  background: isSelected ? '#ffffff' : 'transparent',
+                  color: isSelected ? '#1e293b' : '#64748b',
+                  boxShadow: isSelected ? '0 1px 2px rgba(0,0,0,0.06)' : 'none',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                {tab} ({count})
+              </button>
+            );
+          })}
+        </div>
+
         {/* Search Input */}
-        <div style={{ position: 'relative', width: 320 }}>
+        <div style={{ position: 'relative', width: 300, minWidth: 240, flex: '1 1 auto', maxWidth: 360 }}>
           <Search size={16} style={{ position: 'absolute', left: 12, top: 10, color: '#94a3b8' }} />
           <input
             type="text"

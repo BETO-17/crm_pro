@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   FileText,
   Plus,
@@ -10,10 +11,15 @@ import {
   X,
   Pencil,
   RotateCcw,
+  ScanSearch,
+  ChevronDown,
+  ChevronUp,
+  Network,
 } from 'lucide-react';
 import type { CloudProposal } from '../types/awsTypes';
 import { awsServicesCatalog } from '../data/awsServicesData';
 import { useAws } from '../context/AwsContext';
+import AwsProjectAnalyzer from '../components/AwsProjectAnalyzer';
 import '../aws.css';
 
 // Predefined Optional Templates (User can click one to prefill description, type & services)
@@ -77,10 +83,16 @@ export default function AwsPlanning() {
     removeService,
   } = useAws();
 
+  const navigate = useNavigate();
   const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const [toastAction, setToastAction] = useState<{ label: string; onClick: () => void } | null>(null);
   const [selectedDetailProp, setSelectedDetailProp] = useState<CloudProposal | null>(null);
   const [editingProposalId, setEditingProposalId] = useState<string | null>(null);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
+
+  // Estado del Analizador de Proyectos
+  const [isAnalyzerOpen, setIsAnalyzerOpen] = useState(false);
+  const [cameFromAnalyzer, setCameFromAnalyzer] = useState(false);
 
   // Form Fields - All start completely empty / unselected by default
   const [solutionName, setSolutionName] = useState('');
@@ -101,9 +113,56 @@ export default function AwsPlanning() {
     }
   }, [proposal]);
 
-  const showToast = (msg: string) => {
+  const showToast = (msg: string, action?: { label: string; onClick: () => void }) => {
     setToastMsg(msg);
-    setTimeout(() => setToastMsg(null), 3500);
+    setToastAction(action || null);
+    setTimeout(() => {
+      setToastMsg(null);
+      setToastAction(null);
+    }, action ? 6500 : 3500);
+  };
+
+  const handleGoToDiagram = () => {
+    try {
+      localStorage.setItem('aws:networkTab', 'editor');
+    } catch {
+      // LocalStorage fallback
+    }
+    navigate('/modules/aws/network');
+  };
+
+  const handleApplyAnalyzerResult = (draft: {
+    appType: CloudProposal['appType'];
+    description: string;
+    selectedServices: string[];
+  }) => {
+    setCameFromAnalyzer(true);
+    setAppType(draft.appType);
+    setDescription(draft.description);
+
+    // Agregar servicios sugeridos a la selección
+    for (const svcCode of draft.selectedServices) {
+      if (!services.includes(svcCode)) {
+        addService(svcCode);
+      }
+    }
+
+    // Limpiar errores en esos campos
+    setErrors((prev) => {
+      const copy = { ...prev };
+      delete copy.description;
+      delete copy.appType;
+      delete copy.services;
+      return copy;
+    });
+
+    // Desplazar vista hacia el formulario
+    const formCard = document.getElementById('proposal-form-card');
+    if (formCard) {
+      formCard.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    showToast('Revisa la región, usuarios, SLA y objetivo, y registra tu propuesta');
   };
 
   const handleApplyTemplate = (tpl: typeof proposalTemplates[0]) => {
@@ -250,7 +309,13 @@ export default function AwsPlanning() {
         status: 'Aprobada',
       });
 
-      showToast(`Propuesta "${solutionName.trim()}" registrada y sincronizada con toda la suite Cloud.`);
+      showToast(
+        `Propuesta "${solutionName.trim()}" registrada y sincronizada con la suite Cloud.`,
+        {
+          label: 'Generar diagrama',
+          onClick: handleGoToDiagram,
+        }
+      );
       setSolutionName('');
       setAppType('');
       setRegion('');
@@ -259,6 +324,7 @@ export default function AwsPlanning() {
       setAvailabilityLevel('');
       setMigrationGoal('');
       setSelectedTemplateId(null);
+      setCameFromAnalyzer(false);
     }
   };
 
@@ -290,11 +356,35 @@ export default function AwsPlanning() {
             fontSize: 13,
             display: 'flex',
             alignItems: 'center',
-            gap: 8,
+            gap: 12,
+            maxWidth: 500,
           }}
         >
-          <Sparkles size={16} color="#60a5fa" />
-          {toastMsg}
+          <Sparkles size={16} color="#60a5fa" style={{ flexShrink: 0 }} />
+          <span style={{ flex: 1 }}>{toastMsg}</span>
+          {toastAction && (
+            <button
+              type="button"
+              onClick={toastAction.onClick}
+              style={{
+                background: '#2563eb',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: 6,
+                padding: '5px 12px',
+                fontSize: 11.5,
+                fontWeight: 700,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 5,
+              }}
+            >
+              <Network size={13} />
+              {toastAction.label}
+            </button>
+          )}
         </div>
       )}
 
@@ -374,8 +464,48 @@ export default function AwsPlanning() {
             </div>
           </div>
 
+          {/* Importar desde un proyecto (opcional) */}
+          <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 14, overflow: 'hidden', boxShadow: '0 2px 6px rgba(0,0,0,0.02)' }}>
+            <button
+              type="button"
+              onClick={() => setIsAnalyzerOpen((prev) => !prev)}
+              style={{
+                width: '100%',
+                padding: '16px 20px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                background: '#ffffff',
+                border: 'none',
+                cursor: 'pointer',
+                textAlign: 'left',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ width: 40, height: 40, borderRadius: 10, background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563eb' }}>
+                  <ScanSearch size={22} />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: 14.5, fontWeight: 700, color: '#1e293b', margin: '0 0 2px' }}>
+                    Importar desde un proyecto (opcional)
+                  </h3>
+                  <p style={{ fontSize: 12, color: '#64748b', margin: 0 }}>
+                    Analiza tu proyecto y te sugerimos los servicios AWS adecuados.
+                  </p>
+                </div>
+              </div>
+              {isAnalyzerOpen ? <ChevronUp size={18} color="#64748b" /> : <ChevronDown size={18} color="#64748b" />}
+            </button>
+
+            {isAnalyzerOpen && (
+              <div style={{ padding: '0 20px 20px' }}>
+                <AwsProjectAnalyzer onApplyToProposal={handleApplyAnalyzerResult} />
+              </div>
+            )}
+          </div>
+
           {/* Form Card */}
-          <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 14, padding: 24, boxShadow: '0 2px 6px rgba(0,0,0,0.02)' }}>
+          <div id="proposal-form-card" style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 14, padding: 24, boxShadow: '0 2px 6px rgba(0,0,0,0.02)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
               <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: '#1e293b', display: 'flex', alignItems: 'center', gap: 8 }}>
                 <FileText size={18} color="#2563eb" />
@@ -972,6 +1102,34 @@ export default function AwsPlanning() {
                             Hacer Activa
                           </button>
                         )}
+
+                        {/* Botón Generar Diagrama */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setActiveProposalId(prop.id);
+                            handleGoToDiagram();
+                          }}
+                          title="Generar diagrama de arquitectura en FossFLOW"
+                          style={{
+                            background: '#eff6ff',
+                            border: '1px solid #bfdbfe',
+                            color: '#2563eb',
+                            padding: '3px 8px',
+                            borderRadius: 6,
+                            fontSize: 11,
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 4,
+                            transition: 'all 0.15s ease',
+                          }}
+                          onMouseEnter={(e) => (e.currentTarget.style.background = '#dbeafe')}
+                          onMouseLeave={(e) => (e.currentTarget.style.background = '#eff6ff')}
+                        >
+                          <Network size={12} /> Diagrama
+                        </button>
 
                         {/* Trash Icon (Eliminar) */}
                         <button
