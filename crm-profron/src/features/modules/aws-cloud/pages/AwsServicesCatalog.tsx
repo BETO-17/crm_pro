@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Search } from 'lucide-react';
+import { Search, CheckCircle } from 'lucide-react';
 import AwsServiceCard from '../components/AwsServiceCard';
 import { awsServicesCatalog } from '../data/awsServicesData';
+import { useAws } from '../context/AwsContext';
 import type { ServiceCategory } from '../types/awsTypes';
 import '../aws.css';
 
@@ -17,28 +18,49 @@ const categories: ('Todas' | ServiceCategory)[] = [
 ];
 
 export default function AwsServicesCatalog() {
+  const { deployedServices } = useAws();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<'Todas' | ServiceCategory>('Todas');
+
+  const inArchitectureCount = awsServicesCatalog.filter((svc) =>
+    deployedServices.some((code) => code.toLowerCase() === svc.codeName.toLowerCase())
+  ).length;
+
+  const getCategoryCount = (cat: 'Todas' | ServiceCategory): number => {
+    if (cat === 'Todas') return awsServicesCatalog.length;
+    return awsServicesCatalog.filter((svc) => svc.category === cat).length;
+  };
 
   const filteredServices = awsServicesCatalog.filter((svc) => {
     const matchesCategory = selectedCategory === 'Todas' || svc.category === selectedCategory;
     const matchesSearch =
       svc.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       svc.codeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      svc.description.toLowerCase().includes(searchTerm.toLowerCase());
+      svc.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (svc.mainFunction && svc.mainFunction.toLowerCase().includes(searchTerm.toLowerCase()));
     return matchesCategory && matchesSearch;
   });
 
   return (
     <div className="aws-container">
       {/* Header */}
-      <div>
-        <h1 style={{ fontSize: 24, fontWeight: 800, color: '#1e293b', margin: '0 0 4px' }}>
-          Módulo 7 — Catálogo de Servicios de Amazon Web Services
-        </h1>
-        <p style={{ fontSize: 13, color: '#64748b', margin: 0 }}>
-          Explorador técnico de los principales servicios en la nube con fichas técnicas, tarifas y casos de uso recomendados.
-        </p>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
+        <div>
+          <h1 style={{ fontSize: 28, fontWeight: 800, color: '#1e293b', margin: '0 0 4px' }}>
+            Catálogo de Servicios AWS
+          </h1>
+          <p style={{ fontSize: 13, color: '#64748b', margin: 0 }}>
+            Explorador técnico. Añade servicios directamente a tu cotización y propuesta cloud con 1 clic.
+          </p>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#ffffff', padding: '8px 14px', borderRadius: 10, border: '1px solid #e2e8f0' }}>
+          <CheckCircle size={15} color="#2563eb" />
+          <span style={{ fontSize: 12.5, color: '#64748b' }}>En tu arquitectura:</span>
+          <strong style={{ fontSize: 13, color: '#1e293b' }}>
+            {inArchitectureCount} de {awsServicesCatalog.length} servicios
+          </strong>
+        </div>
       </div>
 
       {/* Filter and Search Bar */}
@@ -61,7 +83,7 @@ export default function AwsServicesCatalog() {
           <Search size={16} style={{ position: 'absolute', left: 12, top: 10, color: '#94a3b8' }} />
           <input
             type="text"
-            placeholder="Buscar por nombre (ej. EC2, S3, RDS)..."
+            placeholder="Buscar por nombre o función (ej. EC2, S3)..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             style={{
@@ -74,10 +96,11 @@ export default function AwsServicesCatalog() {
           />
         </div>
 
-        {/* Category Filter Pills */}
+        {/* Category Filter Pills with counts */}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
           {categories.map((cat) => {
             const isSelected = selectedCategory === cat;
+            const count = getCategoryCount(cat);
             return (
               <button
                 key={cat}
@@ -95,7 +118,7 @@ export default function AwsServicesCatalog() {
                   transition: 'all 0.2s ease',
                 }}
               >
-                {cat}
+                {cat} ({count})
               </button>
             );
           })}
@@ -103,7 +126,7 @@ export default function AwsServicesCatalog() {
       </div>
 
       {/* Services Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 20 }}>
+      <div className="aws-responsive-grid-3">
         {filteredServices.map((svc) => (
           <AwsServiceCard key={svc.id} service={svc} />
         ))}

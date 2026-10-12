@@ -288,15 +288,8 @@ function App() {
       <>
         <div className="topbar-left" />
         <div className="topbar-right">
-          <button
-            className="topbar-logout"
-            onClick={() => navigate('/portal-cursos')}
-            style={{ marginRight: 6 }}
-          >
-            ← Volver al Portal
-          </button>
           <NotificationBell module="aws" />
-          <div className="topbar-avatar-small" aria-hidden="true" style={{ background: 'linear-gradient(135deg, #f59e0b, #ea580c)' }}>AW</div>
+          <div className="topbar-avatar-small" aria-hidden="true" style={{ background: '#2563EB' }}>AW</div>
           <button className="topbar-logout" onClick={handleLogoutClick}>
             <LogOut size={14} />
             Salir
@@ -323,7 +316,7 @@ function App() {
           <button className="topbar-icon-btn" aria-label="Configuración">
             <Settings size={16} />
           </button>
-          <div className="topbar-avatar-small" aria-hidden="true" style={{ background: 'linear-gradient(135deg, #f59e0b, #b45309)' }}>AW</div>
+          <div className="topbar-avatar-small" aria-hidden="true" style={{ background: '#2563EB' }}>AW</div>
           <button className="topbar-logout" onClick={handleLogoutClick}>
             <LogOut size={14} />
             Cerrar Sesión
@@ -424,7 +417,7 @@ function App() {
           path="/modules/aws/*"
           element={
             <ModuleGuard moduleKey="aws">
-              <AwsLayout topBar={renderAwsTopBar()} />
+              <AwsLayout onLogout={handleLogoutClick} />
             </ModuleGuard>
           }
         >

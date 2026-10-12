@@ -12,20 +12,38 @@ export type ServiceCategory =
   | 'Monitoreo y Gestión'
   | 'Analítica';
 
+export type PricingUnit =
+  | 'hour'
+  | 'gb-month'
+  | 'gb-transfer'
+  | 'million-requests'
+  | 'hosted-zone-month'
+  | 'metric-month'
+  | 'free';
+
+export interface ServicePricing {
+  unit: PricingUnit;
+  price: number;
+  unitLabel: string;
+  note?: string;
+}
+
 export interface AwsService {
   id: string;
   name: string;
+  shortName: string;
   codeName: string;
   category: ServiceCategory;
   description: string;
   mainFunction: string;
-  status: 'Activo' | 'Planificado' | 'Disponible' | 'En Mantenimiento';
-  iconType: 'server' | 'database' | 'hard-drive' | 'network' | 'shield' | 'zap' | 'activity' | 'globe';
-  pricingUnit: string;
-  estimatedCostPerHour: number;
-  freeTierEligible: boolean;
-  slaPercent: number;
-  useCase: string;
+  pricing: ServicePricing;
+  status?: 'Activo' | 'Planificado' | 'Disponible' | 'En Mantenimiento';
+  iconType?: 'server' | 'database' | 'hard-drive' | 'network' | 'shield' | 'zap' | 'activity' | 'globe';
+  pricingUnit?: string;
+  estimatedCostPerHour?: number;
+  freeTierEligible?: boolean;
+  slaPercent?: number;
+  useCase?: string;
 }
 
 export interface CloudProposal {
@@ -52,7 +70,10 @@ export interface CostSimulationItem {
   instanceTypeOrTier: string;
   quantity: number;
   hoursPerMonth: number;
-  costPerHour: number;
+  unit?: PricingUnit;
+  unitPrice?: number;
+  formulaText?: string;
+  costPerHour?: number;
   monthlyCost: number;
   annualCost: number;
 }
@@ -68,7 +89,7 @@ export interface AwsRegionInfo {
   status: 'Operacional' | 'Mantenimiento';
   latencyMs: number;
   isPrimary: boolean;
-  coordinates: { x: number; y: number }; // Relative coordinates for visual map (percentage 0-100)
+  coordinates: { x: number; y: number; lat: number; lng: number }; // Relative percentage (x,y) and Geographic coordinates (lat,lng)
   edgeLocationsCount?: number;
   launchedYear?: number;
   complianceList?: string[];
@@ -79,7 +100,7 @@ export interface SecurityResponsibilityItem {
   domain: string;
   awsResponsibility: string;
   customerResponsibility: string;
-  customerStatus: 'correct' | 'review' | 'problem'; // 🟢 verde, 🟡 amarillo, 🔴 rojo
+  customerStatus: 'correct' | 'review' | 'problem'; // verde, amarillo, rojo
   statusLabel: string;
   recommendation: string;
 }
@@ -94,3 +115,5 @@ export interface NetworkNodeInfo {
   securityGroup: string;
   status: 'active' | 'standby';
 }
+
+export type { RegionOperationalStatus, RegionStatusDetails } from '../data/awsRegionsData';
