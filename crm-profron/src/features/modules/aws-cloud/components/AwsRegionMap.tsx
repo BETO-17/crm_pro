@@ -1,68 +1,68 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef } from 'react';
+import * as am5 from '@amcharts/amcharts5';
+import * as am5map from '@amcharts/amcharts5/map';
+import am5geodata_worldLow from '@amcharts/amcharts5-geodata/worldLow';
+import am5themes_Animated from '@amcharts/amcharts5/themes/Animated';
 import {
     Globe,
-    Radio,
-    Layers,
-    Shield,
-    Zap,
-    Activity,
-    CheckCircle,
-    Clock,
-    Compass,
-    Wifi,
+    MapPin,
     Filter,
+    Home,
+    Plus,
+    Minus,
+    Check,
 } from 'lucide-react';
 import type { AwsRegionInfo } from '../types/awsTypes';
-import { awsRegionsList } from '../data/awsRegionsData';
+import { awsRegionsList, getRegionStatus } from '../data/awsRegionsData';
+import StatusBadge from './StatusBadge';
 
 interface AwsRegionMapProps {
     onSelectRegion?: (region: AwsRegionInfo) => void;
-    selectedRegionCode?: string;
+    selectedRegionCode?: string | null;
+    proposalRegion?: string | null;
+    proposalServices?: string[];
+    onSetAsProposalRegion?: (region: AwsRegionInfo) => void;
+    hasActiveProposal?: boolean;
 }
 
-// Major AWS Transoceanic Fiber Backbone Connections
-const backboneCables = [
-    { from: 'us-east-1', to: 'us-west-2', label: 'Trans-US 100GbE' },
-    { from: 'us-east-1', to: 'ca-central-1', label: 'North Link' },
-    { from: 'us-east-1', to: 'sa-east-1', label: 'Atlantic South Subsea Cable' },
-    { from: 'us-east-1', to: 'eu-west-1', label: 'Transatlantic Express (MAREA)' },
-    { from: 'eu-west-1', to: 'eu-central-1', label: 'Euro-Core Backbone' },
-    { from: 'eu-west-1', to: 'eu-south-2', label: 'Iberian Link' },
-    { from: 'eu-central-1', to: 'af-south-1', label: 'Euro-Africa Subsea (2Africa)' },
-    { from: 'eu-central-1', to: 'ap-southeast-1', label: 'Eurasia High-Speed Fiber' },
-    { from: 'us-west-2', to: 'ap-northeast-1', label: 'Transpacific Cable (JUPITER)' },
-    { from: 'ap-northeast-1', to: 'ap-southeast-1', label: 'East Asia Ring' },
-    { from: 'ap-southeast-1', to: 'ap-southeast-2', label: 'Oceania Subsea Cable' },
-];
+// Approximate center coordinates per continent for smooth orbital camera rotation
+const CONTINENT_COORDINATES: Record<string, { lat: number; lng: number }> = {
+    'Todos': { lat: 20, lng: 0 },
+    'América del Norte': { lat: 38, lng: -97 },
+    'América del Sur': { lat: -15, lng: -60 },
+    'Europa': { lat: 50, lng: 15 },
+    'Asia-Pacífico': { lat: 25, lng: 105 },
+    'África': { lat: 5, lng: 20 },
+    'Oceanía': { lat: -25, lng: 135 },
+};
 
-// Simulated Edge Locations across continents
-const edgeLocations = [
-    { name: 'Lima, Perú Edge PoP', x: 28, y: 62 },
-    { name: 'Bogotá, Colombia PoP', x: 30, y: 55 },
-    { name: 'Santiago, Chile PoP', x: 31, y: 78 },
-    { name: 'Buenos Aires, Argentina PoP', x: 36, y: 80 },
-    { name: 'Ciudad de México PoP', x: 21, y: 44 },
-    { name: 'Madrid, España PoP', x: 47, y: 35 },
-    { name: 'Londres, UK PoP', x: 48, y: 25 },
-    { name: 'París, Francia PoP', x: 50, y: 29 },
-    { name: 'Seúl, Corea PoP', x: 84, y: 36 },
-    { name: 'Mumbai, India PoP', x: 70, y: 46 },
-    { name: 'Auckland, NZ PoP', x: 94, y: 84 },
-];
+// Calibrated label placement offsets to prevent overlapping and clipping
+const REGION_LABEL_CONFIG: Record<string, { dx: number; dy: number; centerX?: any; centerY?: any }> = {
+    'ca-central-1': { dx: 0, dy: -18, centerX: am5.p50, centerY: am5.p100 }, // Shifted up into Canada
+    'us-east-1': { dx: 14, dy: 10, centerX: am5.p0, centerY: am5.p0 },     // Shifted down-right towards Atlantic
+    'us-west-2': { dx: -16, dy: 0, centerX: am5.p100, centerY: am5.p50 },  // Shifted west into Pacific NW
+    'eu-west-1': { dx: -16, dy: -6, centerX: am5.p100, centerY: am5.p50 }, // Shifted west into Atlantic
+    'eu-central-1': { dx: 16, dy: 6, centerX: am5.p0, centerY: am5.p50 },   // Shifted east into Germany/East Europe
+    'sa-east-1': { dx: 14, dy: -12, centerX: am5.p0, centerY: am5.p100 },  // Shifted up-right to avoid bottom edge clipping
+};
 
 export default function AwsRegionMap({
     onSelectRegion,
-    selectedRegionCode = 'us-east-1',
+    selectedRegionCode = null,
+    proposalRegion,
+    proposalServices = [],
+    onSetAsProposalRegion,
+    hasActiveProposal = false,
 }: AwsRegionMapProps) {
-    const [activeCode, setActiveCode] = useState(selectedRegionCode);
-    const [hoveredRegion, setHoveredRegion] = useState<AwsRegionInfo | null>(null);
+    const [activeCode, setActiveCode] = useState<string | null>(selectedRegionCode || null);
     const [selectedContinent, setSelectedContinent] = useState<string>('Todos');
-    const [showBackbone, setShowBackbone] = useState(true);
-    const [showEdgeLocations, setShowEdgeLocations] = useState(true);
-    const [isPinging, setIsPinging] = useState(false);
-    const [pingJitter, setPingJitter] = useState<{ [code: string]: number }>({});
 
-    const selectedRegion = awsRegionsList.find((r) => r.code === activeCode) || awsRegionsList[0];
+    const chartRef = useRef<HTMLDivElement>(null);
+    const chartInstanceRef = useRef<am5map.MapChart | null>(null);
+
+    const selectedRegion = activeCode
+        ? awsRegionsList.find((r) => r.code === activeCode) || null
+        : null;
 
     const continents = ['Todos', 'América del Norte', 'América del Sur', 'Europa', 'Asia-Pacífico', 'África', 'Oceanía'];
 
@@ -75,27 +75,322 @@ export default function AwsRegionMap({
         if (onSelectRegion) onSelectRegion(region);
     };
 
-    // Run live ping simulation
-    const handleTriggerPingTest = () => {
-        setIsPinging(true);
-        const newJitters: { [code: string]: number } = {};
-        awsRegionsList.forEach((r) => {
-            // random realistic variance ±4ms
-            const variance = Math.floor(Math.random() * 8) - 4;
-            newJitters[r.code] = Math.max(8, r.latencyMs + variance);
-        });
-        setPingJitter(newJitters);
+    // Handler for continent filters: changes filter and animates globe rotation
+    const handleContinentClick = (cont: string) => {
+        setSelectedContinent(cont);
+        const target = CONTINENT_COORDINATES[cont] || CONTINENT_COORDINATES['Todos'];
+        if (chartInstanceRef.current) {
+            chartInstanceRef.current.animate({
+                key: 'rotationX',
+                to: -target.lng,
+                duration: 1200,
+                easing: am5.ease.out(am5.ease.cubic),
+            });
+            chartInstanceRef.current.animate({
+                key: 'rotationY',
+                to: -target.lat,
+                duration: 1200,
+                easing: am5.ease.out(am5.ease.cubic),
+            });
+        }
+    };
 
-        setTimeout(() => {
-            setIsPinging(false);
-        }, 2400);
+    // Zoom Handlers for Floating Control Widget
+    const handleGoHome = () => {
+        if (chartInstanceRef.current && selectedRegion) {
+            chartInstanceRef.current.goHome();
+            chartInstanceRef.current.animate({
+                key: 'rotationX',
+                to: -selectedRegion.coordinates.lng,
+                duration: 1000,
+                easing: am5.ease.out(am5.ease.cubic),
+            });
+            chartInstanceRef.current.animate({
+                key: 'rotationY',
+                to: -selectedRegion.coordinates.lat,
+                duration: 1000,
+                easing: am5.ease.out(am5.ease.cubic),
+            });
+        }
+    };
+
+    const handleZoomIn = () => {
+        if (chartInstanceRef.current) {
+            chartInstanceRef.current.zoomIn();
+        }
+    };
+
+    const handleZoomOut = () => {
+        if (chartInstanceRef.current) {
+            chartInstanceRef.current.zoomOut();
+        }
     };
 
     useEffect(() => {
         if (selectedRegionCode && selectedRegionCode !== activeCode) {
             setActiveCode(selectedRegionCode);
         }
-    }, [selectedRegionCode]);
+    }, [selectedRegionCode, activeCode]);
+
+    // amCharts 5 initialization with useLayoutEffect & root.dispose() cleanup
+    useLayoutEffect(() => {
+        if (!chartRef.current) return;
+
+        const root = am5.Root.new(chartRef.current);
+        root.setThemes([am5themes_Animated.new(root)]);
+
+        // 1. 3D Orthographic Map Chart
+        const chart = root.container.children.push(
+            am5map.MapChart.new(root, {
+                panX: 'rotateX',
+                panY: 'rotateY',
+                projection: am5map.geoOrthographic(),
+                paddingBottom: 35,
+                paddingTop: 20,
+                paddingLeft: 20,
+                paddingRight: 20,
+                wheelY: 'zoom',
+                maxZoomLevel: 6,
+                minZoomLevel: 0.8,
+            })
+        );
+        chartInstanceRef.current = chart;
+
+        // 2. Dark Mode Globe Sphere Background
+        const backgroundSeries = chart.series.push(am5map.MapPolygonSeries.new(root, {}));
+        backgroundSeries.mapPolygons.template.setAll({
+            fill: am5.color(0x0a1128),
+            fillOpacity: 0.94,
+            stroke: am5.color(0x1e293b),
+            strokeWidth: 1.5,
+        });
+        backgroundSeries.data.push({
+            geometry: am5map.getGeoRectangle(90, 180, -90, -180),
+        });
+
+        // 3. Subtle Celestial Graticule Lines
+        const graticuleSeries = chart.series.push(am5map.GraticuleSeries.new(root, {}));
+        graticuleSeries.mapLines.template.setAll({
+            stroke: am5.color(0x334155),
+            strokeOpacity: 0.22,
+            strokeWidth: 0.6,
+        });
+
+        // 4. Country Polygon Series (#1E293B, border #334155)
+        const polygonSeries = chart.series.push(
+            am5map.MapPolygonSeries.new(root, {
+                geoJSON: am5geodata_worldLow,
+            })
+        );
+
+        polygonSeries.mapPolygons.template.setAll({
+            fill: am5.color(0x1e293b),
+            stroke: am5.color(0x334155),
+            strokeWidth: 0.7,
+            interactive: true,
+        });
+
+        polygonSeries.mapPolygons.template.states.create('hover', {
+            fill: am5.color(0x273549),
+            stroke: am5.color(0x475569),
+        });
+
+        // Interactivity: Click on country centers it smoothly
+        polygonSeries.mapPolygons.template.events.on('click', (ev) => {
+            const dataItem = ev.target.dataItem;
+            if (dataItem) {
+                polygonSeries.zoomToDataItem(dataItem as any);
+            }
+        });
+
+        // 5. Connection Lines (MapLineSeries): Curved 3D lines from Primary Proposal Region to all other regions
+        const lineSeries = chart.series.push(am5map.MapLineSeries.new(root, {}));
+        lineSeries.mapLines.template.setAll({
+            stroke: am5.color(0x3B82F6),
+            strokeOpacity: 0.4,
+            strokeWidth: 1.5,
+            strokeDasharray: [4, 4],
+        });
+
+        const primaryRegionObj = proposalRegion
+            ? awsRegionsList.find((r) => proposalRegion.includes(r.code)) || null
+            : null;
+
+        if (primaryRegionObj) {
+            const connectionLines = filteredRegions
+                .filter((r) => r.code !== primaryRegionObj.code)
+                .map((target) => ({
+                    lineString: {
+                        type: 'LineString',
+                        coordinates: [
+                            [primaryRegionObj.coordinates.lng, primaryRegionObj.coordinates.lat],
+                            [target.coordinates.lng, target.coordinates.lat],
+                        ],
+                    },
+                }));
+            lineSeries.data.setAll(connectionLines);
+        } else {
+            lineSeries.data.setAll([]);
+        }
+
+        // 6. Native Tooltip for MapPointSeries: Light Background & Dark Text
+        const customTooltip = am5.Tooltip.new(root, {
+            getFillFromSprite: false,
+            labelText: '{name} ({code})',
+        });
+        customTooltip.get('background')?.setAll({
+            fill: am5.color(0xffffff),
+            fillOpacity: 0.96,
+            stroke: am5.color(0xcbd5e1),
+            strokeWidth: 1,
+            shadowColor: am5.color(0x000000),
+            shadowBlur: 8,
+            shadowOpacity: 0.12,
+        });
+        customTooltip.label.setAll({
+            fill: am5.color(0x0f172a),
+            fontSize: 12,
+            fontWeight: '600',
+        });
+
+        // 7. Fixed Point Series for AWS Regions
+        const pointSeries = chart.series.push(
+            am5map.MapPointSeries.new(root, {
+                latitudeField: 'lat',
+                longitudeField: 'lng',
+                tooltip: customTooltip,
+            })
+        );
+
+        pointSeries.bullets.push((rootInstance, _series, dataItem) => {
+            const raw = dataItem.dataContext as any;
+            const isInspected = activeCode ? raw.code === activeCode : false;
+            const isProposalTarget = proposalRegion ? proposalRegion.includes(raw.code) : false;
+
+            const container = am5.Container.new(rootInstance, {
+                tooltipText: '{name} ({code})',
+                cursorOverStyle: 'pointer',
+            });
+
+            // Radar pulse ring on active proposal region ONLY
+            if (isProposalTarget) {
+                const pulseRing = container.children.push(
+                    am5.Circle.new(rootInstance, {
+                        radius: 12,
+                        fill: am5.color(0x2563eb),
+                        fillOpacity: 0.35,
+                        stroke: am5.color(0x60a5fa),
+                        strokeWidth: 1.5,
+                        strokeDasharray: [3, 3],
+                    })
+                );
+
+                pulseRing.animate({
+                    key: 'radius',
+                    to: 24,
+                    duration: 1400,
+                    loops: Infinity,
+                    easing: am5.ease.out(am5.ease.cubic),
+                });
+
+                pulseRing.animate({
+                    key: 'fillOpacity',
+                    from: 0.45,
+                    to: 0,
+                    duration: 1400,
+                    loops: Infinity,
+                    easing: am5.ease.out(am5.ease.cubic),
+                });
+            }
+
+            // Outer Halo
+            const halo = container.children.push(
+                am5.Circle.new(rootInstance, {
+                    radius: isProposalTarget ? 9.5 : (isInspected ? 8 : 6.5),
+                    fill: isProposalTarget ? am5.color(0x2563eb) : (isInspected ? am5.color(0x3b82f6) : am5.color(0x94a3b8)),
+                    fillOpacity: isProposalTarget ? 0.35 : (isInspected ? 0.25 : 0.15),
+                })
+            );
+
+            // Region Node Circle Pin
+            container.children.push(
+                am5.Circle.new(rootInstance, {
+                    radius: isProposalTarget ? 7 : (isInspected ? 6 : 4.5),
+                    fill: isProposalTarget ? am5.color(0x2563eb) : (isInspected ? am5.color(0x3b82f6) : am5.color(0x94a3b8)),
+                    stroke: (isProposalTarget || isInspected) ? am5.color(0xffffff) : am5.color(0x334155),
+                    strokeWidth: (isProposalTarget || isInspected) ? 2 : 1.2,
+                })
+            );
+
+            // Region Tag Label with calibrated offsets
+            const cfg = REGION_LABEL_CONFIG[raw.code] || { dx: 0, dy: 14, centerX: am5.p50, centerY: am5.percent(-120) };
+            container.children.push(
+                am5.Label.new(rootInstance, {
+                    text: `{code}`,
+                    dx: cfg.dx,
+                    dy: cfg.dy,
+                    centerX: cfg.centerX,
+                    centerY: cfg.centerY,
+                    fill: (isProposalTarget || isInspected) ? am5.color(0xffffff) : am5.color(0xcbd5e1),
+                    fontSize: (isProposalTarget || isInspected) ? 11 : 9.5,
+                    fontWeight: (isProposalTarget || isInspected) ? '700' : '500',
+                    populateText: true,
+                })
+            );
+
+            // Click listener: Selects region for inspection
+            container.events.on('click', () => {
+                if (raw.region) {
+                    handleSelect(raw.region);
+                }
+            });
+
+            container.events.on('pointerover', () => {
+                halo.set('scale', 1.3);
+            });
+            container.events.on('pointerout', () => {
+                halo.set('scale', 1);
+            });
+
+            return am5.Bullet.new(rootInstance, {
+                sprite: container,
+            });
+        });
+
+        // Populate Fixed AWS Regions Data
+        const pointsData = filteredRegions.map((r) => ({
+            lat: r.coordinates.lat,
+            lng: r.coordinates.lng,
+            code: r.code,
+            name: r.name,
+            availabilityZones: r.availabilityZones,
+            region: r,
+        }));
+        pointSeries.data.setAll(pointsData);
+
+        // Initial Glide & Center onto Selected or Proposal Region
+        const focusRegion = selectedRegion || primaryRegionObj;
+        const targetLng = focusRegion ? focusRegion.coordinates.lng : -40;
+        const targetLat = focusRegion ? focusRegion.coordinates.lat : 15;
+
+        chart.animate({
+            key: 'rotationX',
+            to: -targetLng,
+            duration: 1200,
+            easing: am5.ease.out(am5.ease.cubic),
+        });
+        chart.animate({
+            key: 'rotationY',
+            to: -targetLat,
+            duration: 1200,
+            easing: am5.ease.out(am5.ease.cubic),
+        });
+
+        // Cleanup
+        return () => {
+            root.dispose();
+        };
+    }, [activeCode, selectedContinent, proposalRegion]);
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -105,7 +400,7 @@ export default function AwsRegionMap({
                     background: '#ffffff',
                     border: '1px solid #e2e8f0',
                     borderRadius: 14,
-                    padding: '14px 20px',
+                    padding: '12px 20px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
@@ -124,7 +419,7 @@ export default function AwsRegionMap({
                         return (
                             <button
                                 key={cont}
-                                onClick={() => setSelectedContinent(cont)}
+                                onClick={() => handleContinentClick(cont)}
                                 style={{
                                     padding: '5px 12px',
                                     borderRadius: 20,
@@ -142,106 +437,40 @@ export default function AwsRegionMap({
                         );
                     })}
                 </div>
-
-                {/* Action Toggles */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <button
-                        onClick={() => setShowBackbone(!showBackbone)}
-                        style={{
-                            padding: '6px 12px',
-                            borderRadius: 8,
-                            fontSize: 12,
-                            fontWeight: 600,
-                            border: showBackbone ? '1.5px solid #3b82f6' : '1px solid #cbd5e1',
-                            background: showBackbone ? 'rgba(37, 99, 235, 0.08)' : '#ffffff',
-                            color: showBackbone ? '#2563eb' : '#64748b',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 6,
-                        }}
-                    >
-                        <Activity size={13} color={showBackbone ? '#2563eb' : '#94a3b8'} />
-                        <span>Red Troncal 100G</span>
-                    </button>
-
-                    <button
-                        onClick={() => setShowEdgeLocations(!showEdgeLocations)}
-                        style={{
-                            padding: '6px 12px',
-                            borderRadius: 8,
-                            fontSize: 12,
-                            fontWeight: 600,
-                            border: showEdgeLocations ? '1.5px solid #10b981' : '1px solid #cbd5e1',
-                            background: showEdgeLocations ? 'rgba(16, 185, 129, 0.08)' : '#ffffff',
-                            color: showEdgeLocations ? '#059669' : '#64748b',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 6,
-                        }}
-                    >
-                        <Wifi size={13} color={showEdgeLocations ? '#059669' : '#94a3b8'} />
-                        <span>Edge PoPs (+600)</span>
-                    </button>
-
-                    <button
-                        onClick={handleTriggerPingTest}
-                        disabled={isPinging}
-                        style={{
-                            padding: '6px 14px',
-                            borderRadius: 8,
-                            fontSize: 12,
-                            fontWeight: 700,
-                            border: 'none',
-                            background: isPinging ? '#059669' : '#2563eb',
-                            color: '#ffffff',
-                            cursor: isPinging ? 'default' : 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 6,
-                            boxShadow: '0 2px 8px rgba(37, 99, 235, 0.25)',
-                            transition: 'all 0.2s ease',
-                        }}
-                    >
-                        <Zap size={13} className={isPinging ? 'spin' : ''} />
-                        <span>{isPinging ? 'Midiendo Latencia...' : '⚡ Test de Latencia'}</span>
-                    </button>
-                </div>
             </div>
 
-            {/* World Map Container */}
+            {/* Globe Container */}
             <div
                 style={{
-                    background: 'linear-gradient(180deg, #070c18 0%, #0d1627 100%)',
+                    background: 'radial-gradient(ellipse at center, #0d1627 0%, #070c18 70%, #03060c 100%)',
                     border: '1px solid #1e293b',
                     borderRadius: 18,
-                    padding: '24px 20px',
+                    padding: '20px',
                     position: 'relative',
                     overflow: 'hidden',
-                    boxShadow: '0 12px 36px rgba(0, 0, 0, 0.35)',
-                    minHeight: 520,
+                    boxShadow: '0 16px 40px rgba(0, 0, 0, 0.45)',
+                    minHeight: 560,
                     display: 'flex',
                     flexDirection: 'column',
                     justifyContent: 'space-between',
                 }}
             >
-                {/* Background Coordinates Grid Overlay */}
+                {/* Background Grid Accent Lines */}
                 <div
                     style={{
                         position: 'absolute',
                         inset: 0,
                         backgroundImage: `
-              radial-gradient(rgba(59, 130, 246, 0.18) 1.5px, transparent 1.5px),
+              radial-gradient(rgba(59, 130, 246, 0.2) 1.5px, transparent 1.5px),
               linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
               linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px)
             `,
-                        backgroundSize: '24px 24px, 80px 80px, 80px 80px',
+                        backgroundSize: '32px 32px, 96px 96px, 96px 96px',
                         pointerEvents: 'none',
                     }}
                 />
 
-                {/* Global Map Header HUD */}
+                {/* HUD Header Bar */}
                 <div
                     style={{
                         position: 'relative',
@@ -251,534 +480,291 @@ export default function AwsRegionMap({
                         justifyContent: 'space-between',
                         flexWrap: 'wrap',
                         gap: 12,
-                        marginBottom: 10,
+                        marginBottom: 6,
                     }}
                 >
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <div
                             style={{
-                                width: 34,
-                                height: 34,
-                                borderRadius: 8,
+                                width: 36,
+                                height: 36,
+                                borderRadius: 10,
                                 background: 'rgba(37, 99, 235, 0.25)',
                                 border: '1px solid rgba(59, 130, 246, 0.5)',
                                 color: '#60a5fa',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
+                                boxShadow: '0 0 15px rgba(37, 99, 235, 0.4)',
                             }}
                         >
-                            <Globe size={18} />
+                            <Globe size={19} />
                         </div>
                         <div>
                             <div style={{ color: '#ffffff', fontWeight: 800, fontSize: 15, letterSpacing: '0.4px', display: 'flex', alignItems: 'center', gap: 8 }}>
-                                <span>Mapa Interactivo de Infraestructura Global AWS</span>
-                                <span style={{ fontSize: 10, background: 'rgba(16, 185, 129, 0.2)', color: '#6ee7b7', border: '1px solid rgba(16, 185, 129, 0.4)', padding: '2px 7px', borderRadius: 10, fontWeight: 700 }}>
-                                    LIVE 100 GbE
-                                </span>
+                                <span>Infraestructura Global AWS</span>
                             </div>
                             <div style={{ color: '#94a3b8', fontSize: 11.5 }}>
-                                Haz clic en cualquier nodo o pin para inspeccionar zonas de disponibilidad, latencia y servicios.
+                                Haz clic en cualquier país o región de AWS para rotar el globo y centrarla automáticamente.
                             </div>
                         </div>
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: 14, fontSize: 11.5, color: '#cbd5e1' }}>
+                        {proposalRegion && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#2563eb', boxShadow: '0 0 10px #2563eb' }} />
+                                <span>Región Primaria</span>
+                            </div>
+                        )}
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#3b82f6', boxShadow: '0 0 8px #3b82f6' }} />
+                            <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#94a3b8' }} />
                             <span>Regiones AWS ({awsRegionsList.length})</span>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981', boxShadow: '0 0 6px #10b981' }} />
-                            <span>Edge PoPs (+600)</span>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <Radio size={13} color="#f59e0b" className="spin" />
-                            <span style={{ color: '#fde047' }}>SLA Global 99.99%</span>
                         </div>
                     </div>
                 </div>
 
-                {/* SVG World Map Canvas Area */}
-                <div
-                    style={{
-                        position: 'relative',
-                        width: '100%',
-                        height: '380px',
-                        margin: '10px 0',
-                    }}
-                >
-                    {/* Detailed SVG World Map Vector Backdrop */}
-                    <svg
-                        viewBox="0 0 1000 500"
+                {/* Map Viewport Area with Floating Zoom/Home Controls */}
+                <div className="aws-globe-box" style={{ position: 'relative' }}>
+                    <div
+                        style={{
+                            position: 'absolute',
+                            top: 20,
+                            left: 20,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: 8,
+                            zIndex: 30,
+                        }}
+                    >
+                        <button
+                            onClick={handleGoHome}
+                            title="Centrar Región Activa"
+                            style={{
+                                width: 36,
+                                height: 36,
+                                borderRadius: 10,
+                                background: '#5b8cf7',
+                                border: 'none',
+                                color: '#ffffff',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                cursor: 'pointer',
+                                boxShadow: '0 4px 12px rgba(37, 99, 235, 0.35)',
+                                transition: 'all 0.15s ease',
+                            }}
+                            onMouseEnter={(e) => (e.currentTarget.style.background = '#4075f3')}
+                            onMouseLeave={(e) => (e.currentTarget.style.background = '#5b8cf7')}
+                        >
+                            <Home size={18} />
+                        </button>
+
+                        <button
+                            onClick={handleZoomIn}
+                            title="Aumentar Zoom"
+                            style={{
+                                width: 36,
+                                height: 36,
+                                borderRadius: 10,
+                                background: '#5b8cf7',
+                                border: 'none',
+                                color: '#ffffff',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                cursor: 'pointer',
+                                boxShadow: '0 4px 12px rgba(37, 99, 235, 0.35)',
+                                transition: 'all 0.15s ease',
+                            }}
+                            onMouseEnter={(e) => (e.currentTarget.style.background = '#4075f3')}
+                            onMouseLeave={(e) => (e.currentTarget.style.background = '#5b8cf7')}
+                        >
+                            <Plus size={19} />
+                        </button>
+
+                        <button
+                            onClick={handleZoomOut}
+                            title="Alejar Zoom"
+                            style={{
+                                width: 36,
+                                height: 36,
+                                borderRadius: 10,
+                                background: '#5b8cf7',
+                                border: 'none',
+                                color: '#ffffff',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                cursor: 'pointer',
+                                boxShadow: '0 4px 12px rgba(37, 99, 235, 0.35)',
+                                transition: 'all 0.15s ease',
+                            }}
+                            onMouseEnter={(e) => (e.currentTarget.style.background = '#4075f3')}
+                            onMouseLeave={(e) => (e.currentTarget.style.background = '#5b8cf7')}
+                        >
+                            <Minus size={19} />
+                        </button>
+                    </div>
+
+                    {/* amCharts 5 Mount Point */}
+                    <div
+                        ref={chartRef}
                         style={{
                             width: '100%',
                             height: '100%',
-                            position: 'absolute',
-                            top: 0,
-                            left: 0,
-                            pointerEvents: 'none',
+                            position: 'relative',
                         }}
-                    >
-                        <defs>
-                            {/* Glowing gradients */}
-                            <linearGradient id="cableGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                                <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.8" />
-                                <stop offset="50%" stopColor="#60a5fa" stopOpacity="1" />
-                                <stop offset="100%" stopColor="#3b82f6" stopOpacity="0.8" />
-                            </linearGradient>
-
-                            <filter id="glowEffect" x="-20%" y="-20%" width="140%" height="140%">
-                                <feGaussianBlur stdDeviation="3" result="blur" />
-                                <feMerge>
-                                    <feMergeNode in="blur" />
-                                    <feMergeNode in="SourceGraphic" />
-                                </feMerge>
-                            </filter>
-                        </defs>
-
-                        {/* Latitude Equator & Tropic Reference Lines */}
-                        <line x1="0" y1="250" x2="1000" y2="250" stroke="rgba(255, 255, 255, 0.08)" strokeDasharray="3, 6" />
-                        <line x1="0" y1="170" x2="1000" y2="170" stroke="rgba(255, 255, 255, 0.04)" strokeDasharray="2, 8" />
-                        <line x1="0" y1="330" x2="1000" y2="330" stroke="rgba(255, 255, 255, 0.04)" strokeDasharray="2, 8" />
-
-                        {/* Continent Landmasses Stylized Vectors */}
-                        {/* North America */}
-                        <path
-                            d="M 120 70 Q 180 50 250 60 Q 280 80 270 120 Q 290 150 260 200 Q 220 220 190 260 Q 150 200 130 150 Q 100 120 120 70 Z"
-                            fill="rgba(30, 41, 59, 0.65)"
-                            stroke="rgba(71, 85, 105, 0.45)"
-                            strokeWidth="1.2"
-                        />
-                        {/* Greenland */}
-                        <path
-                            d="M 330 35 Q 370 30 380 65 Q 350 90 325 70 Z"
-                            fill="rgba(30, 41, 59, 0.45)"
-                            stroke="rgba(71, 85, 105, 0.35)"
-                            strokeWidth="1"
-                        />
-                        {/* Central America & Caribbean */}
-                        <path
-                            d="M 190 260 Q 220 280 250 295 Q 260 305 280 295"
-                            fill="none"
-                            stroke="rgba(71, 85, 105, 0.5)"
-                            strokeWidth="1.5"
-                        />
-                        {/* South America */}
-                        <path
-                            d="M 270 300 Q 340 310 380 360 Q 370 420 340 460 Q 300 480 290 440 Q 270 380 260 340 Z"
-                            fill="rgba(30, 41, 59, 0.65)"
-                            stroke="rgba(71, 85, 105, 0.45)"
-                            strokeWidth="1.2"
-                        />
-                        {/* Europe */}
-                        <path
-                            d="M 450 110 Q 510 100 550 120 Q 560 160 520 185 Q 470 190 450 160 Z"
-                            fill="rgba(30, 41, 59, 0.65)"
-                            stroke="rgba(71, 85, 105, 0.45)"
-                            strokeWidth="1.2"
-                        />
-                        {/* United Kingdom & Ireland */}
-                        <path
-                            d="M 445 125 Q 460 115 465 135 Q 450 145 445 125 Z"
-                            fill="rgba(30, 41, 59, 0.7)"
-                            stroke="rgba(71, 85, 105, 0.5)"
-                            strokeWidth="1"
-                        />
-                        {/* Africa */}
-                        <path
-                            d="M 460 200 Q 550 190 570 260 Q 580 340 550 410 Q 510 430 490 380 Q 450 300 460 200 Z"
-                            fill="rgba(30, 41, 59, 0.65)"
-                            stroke="rgba(71, 85, 105, 0.45)"
-                            strokeWidth="1.2"
-                        />
-                        {/* Asia */}
-                        <path
-                            d="M 550 110 Q 680 80 840 100 Q 890 140 850 230 Q 780 270 720 260 Q 680 290 620 230 Q 560 200 550 110 Z"
-                            fill="rgba(30, 41, 59, 0.65)"
-                            stroke="rgba(71, 85, 105, 0.45)"
-                            strokeWidth="1.2"
-                        />
-                        {/* Japan */}
-                        <path
-                            d="M 870 160 Q 885 175 875 195 Q 865 185 870 160 Z"
-                            fill="rgba(30, 41, 59, 0.75)"
-                            stroke="rgba(71, 85, 105, 0.6)"
-                            strokeWidth="1"
-                        />
-                        {/* Australia / Oceania */}
-                        <path
-                            d="M 790 340 Q 890 330 910 390 Q 880 440 820 440 Q 770 410 790 340 Z"
-                            fill="rgba(30, 41, 59, 0.65)"
-                            stroke="rgba(71, 85, 105, 0.45)"
-                            strokeWidth="1.2"
-                        />
-
-                        {/* Inter-Region High-Speed Fiber Backbone Cables (Curved Arcs) */}
-                        {showBackbone && backboneCables.map((cable) => {
-                            const r1 = awsRegionsList.find((r) => r.code === cable.from);
-                            const r2 = awsRegionsList.find((r) => r.code === cable.to);
-                            if (!r1 || !r2) return null;
-
-                            const x1 = r1.coordinates.x * 10;
-                            const y1 = r1.coordinates.y * 5;
-                            const x2 = r2.coordinates.x * 10;
-                            const y2 = r2.coordinates.y * 5;
-
-                            // Quadratic curve control point with slight arc
-                            const cx = (x1 + x2) / 2;
-                            const cy = (y1 + y2) / 2 - Math.abs(x2 - x1) * 0.15;
-
-                            return (
-                                <g key={`${cable.from}-${cable.to}`}>
-                                    {/* Cable Glow */}
-                                    <path
-                                        d={`M ${x1} ${y1} Q ${cx} ${cy} ${x2} ${y2}`}
-                                        fill="none"
-                                        stroke="rgba(37, 99, 235, 0.25)"
-                                        strokeWidth="4"
-                                    />
-                                    {/* Animated Active Cable */}
-                                    <path
-                                        d={`M ${x1} ${y1} Q ${cx} ${cy} ${x2} ${y2}`}
-                                        fill="none"
-                                        stroke="url(#cableGrad)"
-                                        strokeWidth="1.8"
-                                        className="map-cable-active"
-                                    />
-                                </g>
-                            );
-                        })}
-                    </svg>
-
-                    {/* Edge Locations Small Dots */}
-                    {showEdgeLocations && edgeLocations.map((edge) => (
-                        <div
-                            key={edge.name}
-                            title={edge.name}
-                            style={{
-                                position: 'absolute',
-                                top: `${edge.y}%`,
-                                left: `${edge.x}%`,
-                                width: 6,
-                                height: 6,
-                                borderRadius: '50%',
-                                background: '#10b981',
-                                boxShadow: '0 0 6px #34d399',
-                                transform: 'translate(-50%, -50%)',
-                                pointerEvents: 'none',
-                                opacity: 0.85,
-                                zIndex: 8,
-                            }}
-                        />
-                    ))}
-
-                    {/* Interactive Region Pins / Pulsars */}
-                    {filteredRegions.map((region) => {
-                        const isSelected = region.code === activeCode;
-                        const isHovered = hoveredRegion?.code === region.code;
-                        const currentLatency = pingJitter[region.code] || region.latencyMs;
-
-                        return (
-                            <div
-                                key={region.code}
-                                className="map-pin-btn"
-                                style={{
-                                    top: `${region.coordinates.y}%`,
-                                    left: `${region.coordinates.x}%`,
-                                }}
-                                onClick={() => handleSelect(region)}
-                                onMouseEnter={() => setHoveredRegion(region)}
-                                onMouseLeave={() => setHoveredRegion(null)}
-                            >
-                                {/* Radar / Reticle when selected */}
-                                {isSelected && (
-                                    <div
-                                        style={{
-                                            position: 'absolute',
-                                            top: '50%',
-                                            left: '50%',
-                                            width: 48,
-                                            height: 48,
-                                            transform: 'translate(-50%, -50%)',
-                                            borderRadius: '50%',
-                                            border: '1.5px dashed #60a5fa',
-                                            pointerEvents: 'none',
-                                            animation: 'mapRadar 10s linear infinite',
-                                        }}
-                                    />
-                                )}
-
-                                {/* Outer Concentric Ping Rings */}
-                                <div
-                                    className="map-ping-ring"
-                                    style={{
-                                        position: 'absolute',
-                                        top: '50%',
-                                        left: '50%',
-                                        width: isSelected ? 34 : 22,
-                                        height: isSelected ? 34 : 22,
-                                        transform: 'translate(-50%, -50%)',
-                                        borderRadius: '50%',
-                                        background: isSelected ? 'rgba(59, 130, 246, 0.45)' : 'rgba(16, 185, 129, 0.35)',
-                                        pointerEvents: 'none',
-                                    }}
-                                />
-
-                                {/* Main Region Pin Core Button */}
-                                <div
-                                    style={{
-                                        width: isSelected ? 32 : 24,
-                                        height: isSelected ? 32 : 24,
-                                        borderRadius: '50%',
-                                        background: isSelected
-                                            ? 'linear-gradient(135deg, #2563eb, #1d4ed8)'
-                                            : 'linear-gradient(135deg, #0f172a, #1e293b)',
-                                        border: isSelected ? '2px solid #ffffff' : '1.5px solid #60a5fa',
-                                        boxShadow: isSelected
-                                            ? '0 0 20px rgba(96, 165, 250, 0.9), 0 4px 10px rgba(0,0,0,0.5)'
-                                            : '0 0 10px rgba(59, 130, 246, 0.5)',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        fontSize: isSelected ? 14 : 11,
-                                        position: 'relative',
-                                        zIndex: 12,
-                                        transition: 'all 0.2s ease',
-                                    }}
-                                >
-                                    <span>{region.flag}</span>
-                                </div>
-
-                                {/* Mini Badge Below Marker */}
-                                <div
-                                    style={{
-                                        position: 'absolute',
-                                        top: '100%',
-                                        left: '50%',
-                                        transform: 'translateX(-50%)',
-                                        marginTop: 4,
-                                        whiteSpace: 'nowrap',
-                                        background: isSelected ? 'rgba(37, 99, 235, 0.95)' : 'rgba(15, 23, 42, 0.85)',
-                                        backdropFilter: 'blur(6px)',
-                                        border: isSelected ? '1px solid #93c5fd' : '1px solid rgba(255, 255, 255, 0.15)',
-                                        color: '#ffffff',
-                                        padding: '1px 6px',
-                                        borderRadius: 6,
-                                        fontSize: 10,
-                                        fontWeight: 700,
-                                        pointerEvents: 'none',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: 3,
-                                        boxShadow: '0 2px 6px rgba(0,0,0,0.4)',
-                                    }}
-                                >
-                                    <span>{region.code}</span>
-                                    <span style={{ color: currentLatency < 50 ? '#4ade80' : currentLatency < 120 ? '#fde047' : '#f87171' }}>
-                                        • {currentLatency}ms
-                                    </span>
-                                </div>
-
-                                {/* Hover Tooltip Card */}
-                                {isHovered && !isSelected && (
-                                    <div
-                                        style={{
-                                            position: 'absolute',
-                                            bottom: '125%',
-                                            left: '50%',
-                                            transform: 'translateX(-50%)',
-                                            background: '#0f172a',
-                                            border: '1px solid #3b82f6',
-                                            borderRadius: 10,
-                                            padding: '10px 14px',
-                                            color: '#ffffff',
-                                            fontSize: 12,
-                                            width: 210,
-                                            zIndex: 99,
-                                            boxShadow: '0 10px 25px rgba(0,0,0,0.5)',
-                                            pointerEvents: 'none',
-                                        }}
-                                    >
-                                        <div style={{ fontWeight: 800, fontSize: 13, color: '#93c5fd', marginBottom: 2 }}>
-                                            {region.name}
-                                        </div>
-                                        <div style={{ fontSize: 11, color: '#cbd5e1', marginBottom: 6 }}>{region.location}</div>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, paddingTop: 4, borderTop: '1px solid rgba(255,255,255,0.1)' }}>
-                                            <span>Zonas (AZs): <strong style={{ color: '#4ade80' }}>{region.availabilityZones}</strong></span>
-                                            <span>Ping: <strong style={{ color: '#60a5fa' }}>{currentLatency} ms</strong></span>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        );
-                    })}
+                    />
                 </div>
 
                 {/* Selected Region Status Ribbon Bottom HUD */}
-                <div
-                    style={{
-                        position: 'relative',
-                        zIndex: 15,
-                        background: 'rgba(15, 23, 42, 0.85)',
-                        backdropFilter: 'blur(10px)',
-                        border: '1px solid rgba(255, 255, 255, 0.12)',
-                        borderRadius: 12,
-                        padding: '12px 18px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        flexWrap: 'wrap',
-                        gap: 12,
-                        fontSize: 12.5,
-                        color: '#cbd5e1',
-                    }}
-                >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <span style={{ fontSize: 22 }}>{selectedRegion.flag}</span>
-                        <div>
-                            <div style={{ color: '#ffffff', fontWeight: 800, fontSize: 13.5 }}>
-                                {selectedRegion.name} ({selectedRegion.code})
+                {selectedRegion ? (() => {
+                    const isTarget = proposalRegion ? proposalRegion.includes(selectedRegion.code) : false;
+                    const regionServices = isTarget ? (proposalServices || []) : [];
+                    const statusDetails = getRegionStatus(selectedRegion.code, proposalRegion, proposalServices);
+
+                    return (
+                        <div
+                            style={{
+                                position: 'relative',
+                                zIndex: 15,
+                                background: 'rgba(15, 23, 42, 0.90)',
+                                backdropFilter: 'blur(12px)',
+                                border: '1px solid rgba(255, 255, 255, 0.12)',
+                                borderRadius: 12,
+                                padding: '12px 18px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                flexWrap: 'wrap',
+                                gap: 12,
+                                fontSize: 12.5,
+                                color: '#cbd5e1',
+                            }}
+                        >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                <div
+                                    style={{
+                                        width: 34,
+                                        height: 34,
+                                        borderRadius: 8,
+                                        background: 'rgba(37, 99, 235, 0.2)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        color: '#60a5fa',
+                                    }}
+                                >
+                                    <MapPin size={18} />
+                                </div>
+                                <div>
+                                    <div style={{ color: '#ffffff', fontWeight: 800, fontSize: 13.5 }}>
+                                        {selectedRegion.name} ({selectedRegion.code})
+                                    </div>
+                                    <div style={{ fontSize: 11, color: '#94a3b8' }}>
+                                        {selectedRegion.location} • {selectedRegion.continent}
+                                    </div>
+                                </div>
                             </div>
-                            <div style={{ fontSize: 11, color: '#94a3b8' }}>
-                                {selectedRegion.location} • {selectedRegion.continent}
+
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+                                <div>
+                                    <span style={{ color: '#94a3b8', fontSize: 11, display: 'block' }}>Zonas de Disponibilidad:</span>
+                                    <strong style={{ color: '#60a5fa', fontSize: 13 }}>{selectedRegion.availabilityZones} AZs</strong>
+                                </div>
+
+                                <div>
+                                    <span style={{ color: '#94a3b8', fontSize: 11, display: 'block' }}>Servicios Desplegados:</span>
+                                    <strong style={{ color: '#ffffff', fontSize: 13 }}>
+                                        {regionServices.length > 0
+                                            ? `${regionServices.length} (${regionServices.join(', ')})`
+                                            : '0 servicios'}
+                                    </strong>
+                                </div>
+
+                                <div>
+                                    <span style={{ color: '#94a3b8', fontSize: 11, display: 'block', marginBottom: 2 }}>Estado:</span>
+                                    <StatusBadge status={statusDetails.status} size="sm" />
+                                </div>
+
+                                {hasActiveProposal && (
+                                    <div>
+                                        {isTarget ? (
+                                            <span
+                                                style={{
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    gap: 5,
+                                                    padding: '5px 10px',
+                                                    borderRadius: 8,
+                                                    fontSize: 11.5,
+                                                    fontWeight: 700,
+                                                    color: '#16a34a',
+                                                    background: 'rgba(22, 163, 74, 0.15)',
+                                                    border: '1px solid rgba(34, 197, 94, 0.3)',
+                                                }}
+                                            >
+                                                <Check size={13} /> Región de la propuesta
+                                            </span>
+                                        ) : (
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    if (
+                                                        window.confirm(
+                                                            `¿Deseas cambiar la región de la propuesta activa a "${selectedRegion.code} (${selectedRegion.name})"?`
+                                                        )
+                                                    ) {
+                                                        onSetAsProposalRegion?.(selectedRegion);
+                                                    }
+                                                }}
+                                                style={{
+                                                    background: '#2563eb',
+                                                    color: '#ffffff',
+                                                    border: 'none',
+                                                    borderRadius: 8,
+                                                    padding: '6px 12px',
+                                                    fontSize: 12,
+                                                    fontWeight: 700,
+                                                    cursor: 'pointer',
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    gap: 6,
+                                                    boxShadow: '0 2px 6px rgba(37, 99, 235, 0.3)',
+                                                    transition: 'background 0.15s ease',
+                                                }}
+                                            >
+                                                Usar como región de la propuesta
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         </div>
+                    );
+                })() : (
+                    <div
+                        style={{
+                            position: 'relative',
+                            zIndex: 15,
+                            background: 'rgba(15, 23, 42, 0.90)',
+                            backdropFilter: 'blur(12px)',
+                            border: '1px solid rgba(255, 255, 255, 0.12)',
+                            borderRadius: 12,
+                            padding: '14px 20px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: 10,
+                            fontSize: 13,
+                            color: '#94a3b8',
+                        }}
+                    >
+                        <MapPin size={17} color="#60a5fa" />
+                        <span>Haz clic en una región para ver su detalle en el globo.</span>
                     </div>
-
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 18, flexWrap: 'wrap' }}>
-                        <div>
-                            <span style={{ color: '#94a3b8', fontSize: 11, display: 'block' }}>Zonas de Disponibilidad:</span>
-                            <strong style={{ color: '#60a5fa', fontSize: 13 }}>{selectedRegion.availabilityZones} AZs independientes</strong>
-                        </div>
-
-                        <div>
-                            <span style={{ color: '#94a3b8', fontSize: 11, display: 'block' }}>Latencia estimada:</span>
-                            <strong style={{ color: '#4ade80', fontSize: 13 }}>
-                                {pingJitter[selectedRegion.code] || selectedRegion.latencyMs} ms
-                            </strong>
-                        </div>
-
-                        <div>
-                            <span style={{ color: '#94a3b8', fontSize: 11, display: 'block' }}>Servicios AWS Activos:</span>
-                            <strong style={{ color: '#fde047', fontSize: 13 }}>{selectedRegion.activeServicesCount}+ Servicios</strong>
-                        </div>
-
-                        <div>
-                            <span style={{ color: '#94a3b8', fontSize: 11, display: 'block' }}>Estado SLA:</span>
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: '#4ade80', fontWeight: 700, fontSize: 12 }}>
-                                <CheckCircle size={13} /> {selectedRegion.status}
-                            </span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Selected Region Deep Inspection HUD */}
-            <div
-                style={{
-                    background: '#ffffff',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: 16,
-                    padding: '24px 28px',
-                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.03)',
-                }}
-            >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18, flexWrap: 'wrap', gap: 10 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <div style={{ width: 40, height: 40, borderRadius: 10, background: 'rgba(37, 99, 235, 0.1)', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <Compass size={22} />
-                        </div>
-                        <div>
-                            <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: '#1e293b' }}>
-                                Ficha Técnica de la Región: {selectedRegion.code}
-                            </h3>
-                            <span style={{ fontSize: 12.5, color: '#64748b' }}>
-                                Detalles de hardware, aislamiento de fallos y certificaciones de cumplimiento de datos.
-                            </span>
-                        </div>
-                    </div>
-
-                    <div style={{ display: 'flex', gap: 8 }}>
-                        <span style={{ background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe', padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 700 }}>
-                            Lanzamiento: {selectedRegion.launchedYear || 2012}
-                        </span>
-                        <span style={{ background: '#f0fdf4', color: '#15803d', border: '1px solid #bbf7d0', padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 700 }}>
-                            Multi-AZ Síncrono
-                        </span>
-                    </div>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16, marginBottom: 20 }}>
-                    <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 12, padding: 16 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#2563eb', fontWeight: 700, fontSize: 13, marginBottom: 6 }}>
-                            <Layers size={16} />
-                            <span>Aislamiento de Zonas (AZs)</span>
-                        </div>
-                        <p style={{ margin: 0, fontSize: 12, color: '#64748b', lineHeight: 1.5 }}>
-                            Cuenta con <strong>{selectedRegion.availabilityZones} Zonas de Disponibilidad</strong> interconectadas con fibra óptica privada de baja latencia (&lt;1ms).
-                        </p>
-                    </div>
-
-                    <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 12, padding: 16 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#059669', fontWeight: 700, fontSize: 13, marginBottom: 6 }}>
-                            <Zap size={16} />
-                            <span>Edge PoPs de Proximidad</span>
-                        </div>
-                        <p style={{ margin: 0, fontSize: 12, color: '#64748b', lineHeight: 1.5 }}>
-                            Respaldada por <strong>{selectedRegion.edgeLocationsCount || 20} Edge Locations</strong> de Amazon CloudFront para aceleración web y caché de assets.
-                        </p>
-                    </div>
-
-                    <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 12, padding: 16 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#d97706', fontWeight: 700, fontSize: 13, marginBottom: 6 }}>
-                            <Clock size={16} />
-                            <span>Latencia Promedio</span>
-                        </div>
-                        <p style={{ margin: 0, fontSize: 12, color: '#64748b', lineHeight: 1.5 }}>
-                            Tiempo de respuesta RTT de <strong>{pingJitter[selectedRegion.code] || selectedRegion.latencyMs} ms</strong> mediante la red troncal global de Amazon.
-                        </p>
-                    </div>
-
-                    <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 12, padding: 16 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#7c3aed', fontWeight: 700, fontSize: 13, marginBottom: 6 }}>
-                            <Shield size={16} />
-                            <span>Soberanía de Datos</span>
-                        </div>
-                        <p style={{ margin: 0, fontSize: 12, color: '#64748b', lineHeight: 1.5 }}>
-                            Cifrado estricto en reposo con AWS KMS y residencia física garantizada dentro de {selectedRegion.location}.
-                        </p>
-                    </div>
-                </div>
-
-                {/* Compliance Badges List */}
-                <div>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: '#475569', display: 'block', marginBottom: 8 }}>
-                        Estándares y Certificaciones de Seguridad Homologados en {selectedRegion.code}:
-                    </span>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
-                        {(selectedRegion.complianceList || ['ISO 27001', 'SOC 1/2/3', 'PCI-DSS', 'HIPAA']).map((comp) => (
-                            <span
-                                key={comp}
-                                style={{
-                                    background: '#f1f5f9',
-                                    color: '#334155',
-                                    border: '1px solid #cbd5e1',
-                                    padding: '4px 10px',
-                                    borderRadius: 6,
-                                    fontSize: 11.5,
-                                    fontWeight: 700,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: 4,
-                                }}
-                            >
-                                <CheckCircle size={12} color="#16a34a" />
-                                {comp}
-                            </span>
-                        ))}
-                    </div>
-                </div>
+                )}
             </div>
         </div>
     );

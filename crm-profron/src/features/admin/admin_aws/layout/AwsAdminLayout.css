@@ -1,22 +1,42 @@
 /* ==========================================
    AwsAdminLayout — Stylesheet
+   Colores exactos requeridos:
+   - Fondo principal: #F8FAFC
+   - Sidebar: #0F172A
+   - Color principal / acciones: #2563EB
+   - Seguridad / éxito: #16A34A
+   - Costos / advertencia: #F59E0B
+   - Alertas / error: #DC2626
+   - Texto principal: #1E293B
+   - Texto secundario: #64748B
+   - Bordes: #E2E8F0
+   - Cards: #FFFFFF
    ========================================== */
 
 .aws-admin-sidebar {
-  background: #0d131f !important;
+  background: #0F172A !important;
+  border-right: 1px solid rgba(226, 232, 240, 0.08) !important;
 }
 
-.aws-admin-brand-icon {
-  background: linear-gradient(135deg, #f59e0b, #ea580c) !important;
+.aws-admin-sidebar .sidebar-nav-item {
+  color: #94A3B8 !important;
+  font-weight: 500;
+  border-radius: 8px;
+  transition: all 0.2s ease;
 }
 
 .aws-admin-sidebar .sidebar-nav-item.active {
-  background: rgba(245, 158, 11, 0.18) !important;
-  color: #fde68a !important;
-  border-left: 3px solid #f59e0b;
+  background: rgba(37, 99, 235, 0.16) !important;
+  color: #FFFFFF !important;
+  border-left: 3px solid #2563EB !important;
+  font-weight: 700 !important;
+}
+
+.aws-admin-sidebar .sidebar-nav-item.active .nav-icon {
+  color: #2563EB !important;
 }
 
 .aws-admin-sidebar .sidebar-nav-item:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: #fef08a;
+  background: rgba(255, 255, 255, 0.06) !important;
+  color: #FFFFFF !important;
 }

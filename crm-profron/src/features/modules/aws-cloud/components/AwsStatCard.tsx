@@ -5,12 +5,14 @@ interface AwsStatCardProps {
   value: string | number;
   subtitle?: string;
   badgeText?: string;
-  badgeType?: 'success' | 'warning' | 'info' | 'alert';
+  badgeType?: 'success' | 'warning' | 'info' | 'alert' | 'neutral';
   icon: LucideIcon;
   iconColor?: string;
   iconBg?: string;
   trend?: string;
   trendPositive?: boolean;
+  onClick?: () => void;
+  clickableHint?: string;
 }
 
 export default function AwsStatCard({
@@ -24,6 +26,8 @@ export default function AwsStatCard({
   iconBg = 'rgba(37, 99, 235, 0.1)',
   trend,
   trendPositive = true,
+  onClick,
+  clickableHint,
 }: AwsStatCardProps) {
   const getBadgeStyle = () => {
     switch (badgeType) {
@@ -33,6 +37,8 @@ export default function AwsStatCard({
         return { bg: 'rgba(245, 158, 11, 0.14)', color: '#d97706', border: '1px solid rgba(245, 158, 11, 0.3)' };
       case 'alert':
         return { bg: 'rgba(220, 38, 38, 0.12)', color: '#dc2626', border: '1px solid rgba(220, 38, 38, 0.25)' };
+      case 'neutral':
+        return { bg: '#f1f5f9', color: '#64748b', border: '1px solid #cbd5e1' };
       case 'info':
       default:
         return { bg: 'rgba(37, 99, 235, 0.1)', color: '#2563eb', border: '1px solid rgba(37, 99, 235, 0.2)' };
@@ -43,6 +49,8 @@ export default function AwsStatCard({
 
   return (
     <div
+      onClick={onClick}
+      className={onClick ? 'aws-stat-card-clickable' : ''}
       style={{
         background: '#ffffff',
         border: '1px solid #e2e8f0',
@@ -53,10 +61,19 @@ export default function AwsStatCard({
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'space-between',
+        cursor: onClick ? 'pointer' : 'default',
+        position: 'relative',
       }}
     >
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
-        <span style={{ fontSize: 13, fontWeight: 600, color: '#64748b' }}>{title}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ fontSize: 13, fontWeight: 600, color: '#64748b' }}>{title}</span>
+          {onClick && (
+            <span style={{ fontSize: 10.5, color: '#3b82f6', background: 'rgba(59, 130, 246, 0.08)', padding: '1px 6px', borderRadius: 6, fontWeight: 700, whiteSpace: 'nowrap', flexShrink: 0 }}>
+              {clickableHint || 'Detalle ↗'}
+            </span>
+          )}
+        </div>
         <div
           style={{
             width: 38,
@@ -85,7 +102,7 @@ export default function AwsStatCard({
               style={{
                 fontSize: 11.5,
                 fontWeight: 700,
-                color: trendPositive ? '#16a34a' : '#dc2626',
+                color: trend === 'Sin definir' ? '#64748b' : (trendPositive ? '#16a34a' : '#dc2626'),
               }}
             >
               {trend}

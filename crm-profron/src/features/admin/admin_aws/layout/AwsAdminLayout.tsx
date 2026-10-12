@@ -41,22 +41,37 @@ export default function AwsAdminLayout({ topBar }: AwsAdminLayoutProps) {
   if (path.includes('/admin/aws/seguridad')) activeView = 'seguridad';
 
   return (
-    <div className="admin-layout">
+    <div className="admin-layout aws-theme-layout">
       {/* ---- Sidebar ---- */}
       <aside className="admin-sidebar aws-admin-sidebar" aria-label="Sidebar de administración AWS">
-        <div className="sidebar-header">
+        {/* CloudOps Brand matching Image 2 */}
+        <div className="sidebar-header cloudops-sidebar-header">
           <div
-            className="sidebar-brand"
+            className="cloudops-brand"
             onClick={() => navigate('/portal-cursos')}
             style={{ cursor: 'pointer' }}
-            title="Volver al portal de especialidades"
+            title="CloudOps — Cloud Management Console"
           >
-            <div className="sidebar-brand-icon aws-admin-brand-icon">
-              <Cpu size={18} color="#ffffff" />
+            <div className="cloudops-icon-container">
+              <svg
+                width="34"
+                height="34"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#2563EB"
+                strokeWidth="2.3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="cloudops-icon"
+              >
+                <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z" />
+              </svg>
             </div>
-            <div className="sidebar-brand-text">
-              <span className="sidebar-brand-name">AWS Management</span>
-              <span className="sidebar-brand-sub">Admin Console</span>
+            <div className="cloudops-text-group">
+              <div className="cloudops-title">
+                CloudOps<span className="cloudops-dot">.</span>
+              </div>
+              <div className="cloudops-subtitle">CLOUD MANAGEMENT</div>
             </div>
           </div>
         </div>
