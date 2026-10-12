@@ -1,0 +1,451 @@
+{
+  "title": "Lumina - Asistencia Facial (arquitectura)",
+  "icons": [],
+  "colors": [
+    {
+      "id": "c_blue",
+      "value": "#a5b8f3"
+    },
+    {
+      "id": "c_green",
+      "value": "#bbfabb"
+    },
+    {
+      "id": "c_orange",
+      "value": "#f5c196"
+    },
+    {
+      "id": "c_red",
+      "value": "#f5a5a5"
+    },
+    {
+      "id": "c_gray",
+      "value": "#dddddd"
+    }
+  ],
+  "items": [
+    {
+      "id": "users",
+      "name": "Admin / RRHH y Empleados",
+      "description": "Navegador web. Admin gestiona empleados, horarios, áreas, impuestos y estadísticas; empleados marcan asistencia con la cámara (reconocimiento facial).",
+      "icon": "user"
+    },
+    {
+      "id": "nginx",
+      "name": "Nginx reverse proxy (VPS)",
+      "description": "SSL Let's Encrypt, redirección 80→443, client_max_body_size 10M. Dominios: lumnia.cabanillas.net.pe y lumina-backend.cabanillas.net.pe.",
+      "icon": "loadbalancer"
+    },
+    {
+      "id": "frontend",
+      "name": "lumina-frontend",
+      "description": "Astro 4 + React 18 + Tailwind + shadcn/ui. Build estático servido por Nginx. Host 5187 → contenedor 80. PUBLIC_API_URL embebida en el build.",
+      "icon": "desktop"
+    },
+    {
+      "id": "backend",
+      "name": "lumina-backend",
+      "description": "Node 20 + Express. Rutas: admin, empleados, asistencia, horarios, áreas, asignaciones, justificaciones, reconocimiento, historial, log-reconocimiento. Host 5186 → contenedor 3000.",
+      "icon": "server"
+    },
+    {
+      "id": "face",
+      "name": "face_api",
+      "description": "Microservicio FastAPI + face_recognition (stateless). Endpoints: /generate (embedding 128 floats), /compare, /verify. Puerto 8000.",
+      "icon": "function-module"
+    },
+    {
+      "id": "pg",
+      "name": "Supabase PostgreSQL",
+      "description": "Base de datos (bd.sql + migrations). Conexión con pg Pool vía pooler puerto 6543 con SSL.",
+      "icon": "storage"
+    },
+    {
+      "id": "storage",
+      "name": "Supabase Storage",
+      "description": "Bucket empleado_fotos con las fotos de los empleados (supabase-js).",
+      "icon": "image"
+    },
+    {
+      "id": "vercel",
+      "name": "Vercel (despliegue alterno)",
+      "description": "lumina-delta-brown.vercel.app. Frontend estático + backend Express como función serverless (api/index.js).",
+      "icon": "cloud"
+    }
+  ],
+  "views": [
+    {
+      "id": "view_lumina",
+      "name": "Arquitectura Lumina",
+      "items": [
+        {
+          "id": "users",
+          "tile": {
+            "x": 0,
+            "y": 0
+          },
+          "labelHeight": 80
+        },
+        {
+          "id": "nginx",
+          "tile": {
+            "x": 5,
+            "y": 0
+          },
+          "labelHeight": 80
+        },
+        {
+          "id": "frontend",
+          "tile": {
+            "x": 12,
+            "y": -4
+          },
+          "labelHeight": 80
+        },
+        {
+          "id": "backend",
+          "tile": {
+            "x": 12,
+            "y": 3
+          },
+          "labelHeight": 80
+        },
+        {
+          "id": "face",
+          "tile": {
+            "x": 12,
+            "y": 8
+          },
+          "labelHeight": 80
+        },
+        {
+          "id": "pg",
+          "tile": {
+            "x": 22,
+            "y": -3
+          },
+          "labelHeight": 80
+        },
+        {
+          "id": "storage",
+          "tile": {
+            "x": 22,
+            "y": 2
+          },
+          "labelHeight": 80
+        },
+        {
+          "id": "vercel",
+          "tile": {
+            "x": 5,
+            "y": -9
+          },
+          "labelHeight": 80
+        }
+      ],
+      "connectors": [
+        {
+          "id": "k1",
+          "color": "c_blue",
+          "description": "HTTPS",
+          "width": 10,
+          "style": "SOLID",
+          "showArrow": true,
+          "anchors": [
+            {
+              "id": "k1_a",
+              "ref": {
+                "item": "users"
+              }
+            },
+            {
+              "id": "k1_b",
+              "ref": {
+                "item": "nginx"
+              }
+            }
+          ]
+        },
+        {
+          "id": "k2",
+          "color": "c_blue",
+          "description": "lumnia.*",
+          "width": 10,
+          "style": "SOLID",
+          "showArrow": true,
+          "anchors": [
+            {
+              "id": "k2_a",
+              "ref": {
+                "item": "nginx"
+              }
+            },
+            {
+              "id": "k2_b",
+              "ref": {
+                "item": "frontend"
+              }
+            }
+          ]
+        },
+        {
+          "id": "k3",
+          "color": "c_blue",
+          "description": "lumina-backend.* /api",
+          "width": 10,
+          "style": "SOLID",
+          "showArrow": true,
+          "anchors": [
+            {
+              "id": "k3_a",
+              "ref": {
+                "item": "nginx"
+              }
+            },
+            {
+              "id": "k3_b",
+              "ref": {
+                "item": "backend"
+              }
+            }
+          ]
+        },
+        {
+          "id": "k4",
+          "color": "c_orange",
+          "description": "REST (PUBLIC_API_URL)",
+          "width": 10,
+          "style": "DOTTED",
+          "showArrow": true,
+          "anchors": [
+            {
+              "id": "k4_a",
+              "ref": {
+                "item": "frontend"
+              }
+            },
+            {
+              "id": "k4_b",
+              "ref": {
+                "item": "backend"
+              }
+            }
+          ]
+        },
+        {
+          "id": "k5",
+          "color": "c_red",
+          "description": "HTTP /generate /compare",
+          "width": 10,
+          "style": "SOLID",
+          "showArrow": true,
+          "anchors": [
+            {
+              "id": "k5_a",
+              "ref": {
+                "item": "backend"
+              }
+            },
+            {
+              "id": "k5_b",
+              "ref": {
+                "item": "face"
+              }
+            }
+          ]
+        },
+        {
+          "id": "k6",
+          "color": "c_green",
+          "description": "SQL pool :6543 SSL",
+          "width": 10,
+          "style": "SOLID",
+          "showArrow": true,
+          "anchors": [
+            {
+              "id": "k6_a",
+              "ref": {
+                "item": "backend"
+              }
+            },
+            {
+              "id": "k6_b",
+              "ref": {
+                "item": "pg"
+              }
+            }
+          ]
+        },
+        {
+          "id": "k7",
+          "color": "c_green",
+          "description": "Fotos empleado_fotos",
+          "width": 10,
+          "style": "SOLID",
+          "showArrow": true,
+          "anchors": [
+            {
+              "id": "k7_a",
+              "ref": {
+                "item": "backend"
+              }
+            },
+            {
+              "id": "k7_b",
+              "ref": {
+                "item": "storage"
+              }
+            }
+          ]
+        },
+        {
+          "id": "k8",
+          "color": "c_gray",
+          "description": "Alterno",
+          "width": 10,
+          "style": "DASHED",
+          "showArrow": true,
+          "anchors": [
+            {
+              "id": "k8_a",
+              "ref": {
+                "item": "users"
+              }
+            },
+            {
+              "id": "k8_b",
+              "ref": {
+                "item": "vercel"
+              }
+            }
+          ]
+        },
+        {
+          "id": "k9",
+          "color": "c_gray",
+          "description": "SQL",
+          "width": 10,
+          "style": "DASHED",
+          "showArrow": true,
+          "anchors": [
+            {
+              "id": "k9_a",
+              "ref": {
+                "item": "vercel"
+              }
+            },
+            {
+              "id": "k9_b",
+              "ref": {
+                "item": "pg"
+              }
+            }
+          ]
+        },
+        {
+          "id": "k10",
+          "color": "c_gray",
+          "description": "Fotos",
+          "width": 10,
+          "style": "DASHED",
+          "showArrow": true,
+          "anchors": [
+            {
+              "id": "k10_a",
+              "ref": {
+                "item": "vercel"
+              }
+            },
+            {
+              "id": "k10_b",
+              "ref": {
+                "item": "storage"
+              }
+            }
+          ]
+        },
+        {
+          "id": "k11",
+          "color": "c_gray",
+          "description": "FACE_API_URL",
+          "width": 10,
+          "style": "DASHED",
+          "showArrow": true,
+          "anchors": [
+            {
+              "id": "k11_a",
+              "ref": {
+                "item": "vercel"
+              }
+            },
+            {
+              "id": "k11_b",
+              "ref": {
+                "item": "face"
+              }
+            }
+          ]
+        }
+      ],
+      "rectangles": [
+        {
+          "id": "r_docker",
+          "color": "c_blue",
+          "from": {
+            "x": 9,
+            "y": -7
+          },
+          "to": {
+            "x": 16,
+            "y": 10
+          }
+        },
+        {
+          "id": "r_supa",
+          "color": "c_green",
+          "from": {
+            "x": 19,
+            "y": -6
+          },
+          "to": {
+            "x": 25,
+            "y": 5
+          }
+        }
+      ],
+      "textBoxes": [
+        {
+          "id": "t_docker",
+          "tile": {
+            "x": 9,
+            "y": -8
+          },
+          "content": "VPS - Docker (red global_net)",
+          "fontSize": 0.6,
+          "orientation": "X"
+        },
+        {
+          "id": "t_supa",
+          "tile": {
+            "x": 19,
+            "y": -7
+          },
+          "content": "Supabase (cloud)",
+          "fontSize": 0.6,
+          "orientation": "X"
+        },
+        {
+          "id": "t_vercel",
+          "tile": {
+            "x": 2,
+            "y": -10
+          },
+          "content": "Despliegue alterno en Vercel",
+          "fontSize": 0.5,
+          "orientation": "X"
+        }
+      ]
+    }
+  ],
+  "fitToScreen": true
+}
