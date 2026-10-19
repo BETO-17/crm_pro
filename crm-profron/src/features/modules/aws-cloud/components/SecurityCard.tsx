@@ -32,8 +32,8 @@ export default function SecurityCard({
         border: !applies
           ? '1px dashed #cbd5e1'
           : effectiveActive
-          ? '2px solid #16a34a'
-          : '1px solid #e2e8f0',
+            ? '2px solid #16a34a'
+            : '1px solid #e2e8f0',
         borderRadius: 12,
         padding: 18,
         cursor: !applies ? 'not-allowed' : 'pointer',
@@ -95,8 +95,8 @@ export default function SecurityCard({
           {!applies
             ? (disabledTooltip || 'Este control no aplica a los servicios de la solución actual.')
             : effectiveActive
-            ? activeDescription
-            : `${inactiveDescription} (+${points} pts).`}
+              ? activeDescription
+              : `${inactiveDescription} (+${points} pts).`}
         </p>
       </div>
     </div>

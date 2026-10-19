@@ -21,6 +21,7 @@
     "react-globe.gl": "^2.38.0",
     "react-router-dom": "^7.18.3",
     "react-simple-maps": "^5.0.5",
+    "recharts": "^3.10.1",
     "three": "^0.186.1"
   },
   "devDependencies": {

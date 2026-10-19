@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useMemo, type ReactNode } from 'react';
-import type { CloudProposal, CostSimulationItem } from '../types/awsTypes';
+import type { CloudProposal, CostSimulationItem, ProjectAnalysis } from '../types/awsTypes';
 import { awsServicesCatalog } from '../data/awsServicesData';
-import { demoProposal, demoCostItems, demoSecurityControls } from '../data/awsDemoData';
+import { demoProposal, demoCostItems, demoSecurityControls, demoAnalysis } from '../data/awsDemoData';
 
 export interface SecurityControls {
   rootBlocked: boolean;
@@ -55,6 +55,12 @@ export interface AwsContextType {
   resetAll: () => void;
   loadDemo: () => void;
 
+  // Analysis reports
+  analyses: ProjectAnalysis[];
+  addAnalysis: (analysis: ProjectAnalysis) => void;
+  getAnalysis: (id: string) => ProjectAnalysis | undefined;
+  clearAnalyses: () => void;
+
   // Compatibility Action Aliases
   addProposal: (proposalData: Omit<CloudProposal, 'id' | 'createdAt'>) => void;
   deleteProposal: (id: string) => void;
@@ -72,30 +78,59 @@ export interface AwsContextType {
 }
 
 const STORAGE_KEYS = {
+  PROPOSALS: 'crm_aws_proposals',
   PROPOSAL: 'crm_aws_proposal',
+  ACTIVE_ID: 'crm_aws_active_proposal_id',
   SERVICES: 'crm_aws_services',
   COST_ITEMS: 'crm_aws_cost_items',
   SECURITY: 'crm_aws_security',
+  ANALYSES: 'aws:analyses',
 };
 
 const AwsContext = createContext<AwsContextType | undefined>(undefined);
 
 export const AwsProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  // 1. Proposal (Starts null by default)
-  const [proposal, setProposal] = useState<CloudProposal | null>(() => {
+  // 1. Proposals List
+  const [proposals, setProposals] = useState<CloudProposal[]>(() => {
     try {
-      const saved = localStorage.getItem(STORAGE_KEYS.PROPOSAL);
-      if (saved !== null) {
-        const parsed = JSON.parse(saved);
+      const savedProposals = localStorage.getItem(STORAGE_KEYS.PROPOSALS);
+      if (savedProposals !== null) {
+        const parsed = JSON.parse(savedProposals);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+      const savedProposal = localStorage.getItem(STORAGE_KEYS.PROPOSAL);
+      if (savedProposal !== null) {
+        const parsed = JSON.parse(savedProposal);
         if (parsed && typeof parsed === 'object' && parsed.solutionName) {
-          return parsed;
+          return [parsed];
         }
       }
     } catch {
       // ignore
     }
+    return [];
+  });
+
+  // Active Proposal ID
+  const [activeProposalId, setActiveProposalId] = useState<string | null>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.ACTIVE_ID);
+      if (saved) return saved;
+    } catch {
+      // ignore
+    }
     return null;
   });
+
+  // Derived Active Proposal
+  const proposal = useMemo(() => {
+    if (proposals.length === 0) return null;
+    if (activeProposalId) {
+      const found = proposals.find((p) => p.id === activeProposalId);
+      if (found) return found;
+    }
+    return proposals[0];
+  }, [proposals, activeProposalId]);
 
   // 2. Services (Single shared array of service codeNames)
   const [services, setServices] = useState<string[]>(() => {
@@ -139,18 +174,35 @@ export const AwsProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return DEFAULT_SECURITY_CONTROLS;
   });
 
-  // Persist State with try/catch
-  useEffect(() => {
+  // 5. Project Analyses List (persisted in aws:analyses, max 10)
+  const [analyses, setAnalyses] = useState<ProjectAnalysis[]>(() => {
     try {
-      if (proposal) {
-        localStorage.setItem(STORAGE_KEYS.PROPOSAL, JSON.stringify(proposal));
-      } else {
-        localStorage.removeItem(STORAGE_KEYS.PROPOSAL);
+      const saved = localStorage.getItem(STORAGE_KEYS.ANALYSES);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed.slice(0, 10);
       }
     } catch {
       // ignore
     }
-  }, [proposal]);
+    return [];
+  });
+
+  // Persist State with try/catch
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEYS.PROPOSALS, JSON.stringify(proposals));
+      if (proposal) {
+        localStorage.setItem(STORAGE_KEYS.PROPOSAL, JSON.stringify(proposal));
+        localStorage.setItem(STORAGE_KEYS.ACTIVE_ID, proposal.id);
+      } else {
+        localStorage.removeItem(STORAGE_KEYS.PROPOSAL);
+        localStorage.removeItem(STORAGE_KEYS.ACTIVE_ID);
+      }
+    } catch {
+      // ignore
+    }
+  }, [proposals, proposal]);
 
   useEffect(() => {
     try {
@@ -175,6 +227,14 @@ export const AwsProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       // ignore
     }
   }, [securityControls]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEYS.ANALYSES, JSON.stringify(analyses));
+    } catch {
+      // ignore
+    }
+  }, [analyses]);
 
   // Derived Values (Calculated strictly from state)
   const region = useMemo(() => {
@@ -218,8 +278,6 @@ export const AwsProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   // Backward compatibility
   const activeProposal = proposal;
-  const proposals = useMemo(() => (proposal ? [proposal] : []), [proposal]);
-  const activeProposalId = proposal ? proposal.id : null;
 
   // Helpers to resolve service codeName
   const resolveCodeName = (nameOrId: string): string => {
@@ -230,15 +288,20 @@ export const AwsProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   // Actions
-  const createProposal = (proposalData: Omit<CloudProposal, 'id' | 'createdAt'>) => {
-    const newId = `prop-${Date.now()}`;
+  const createProposal = (proposalData: Omit<CloudProposal, 'id' | 'createdAt'> | CloudProposal) => {
+    const newId = ('id' in proposalData && proposalData.id) ? proposalData.id : `prop-${Date.now()}`;
+    const createdAt = ('createdAt' in proposalData && proposalData.createdAt) ? proposalData.createdAt : new Date().toISOString().split('T')[0];
+    const rawServices = proposalData.selectedServices || proposalData.services || [];
     const newProp: CloudProposal = {
       ...proposalData,
       id: newId,
-      createdAt: new Date().toISOString().split('T')[0],
+      createdAt,
+      selectedServices: rawServices,
+      services: rawServices,
     };
 
-    setProposal(newProp);
+    setProposals((prev) => [newProp, ...prev.filter((p) => p.id !== newId)]);
+    setActiveProposalId(newId);
     setServices(newProp.selectedServices);
 
     // Auto-generate cost items if currently empty
@@ -265,13 +328,25 @@ export const AwsProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const updateProposal = (partial: Partial<CloudProposal>) => {
-    setProposal((prev) => {
-      if (!prev) return null;
-      const updated = { ...prev, ...partial };
-      if (partial.selectedServices) {
-        setServices(partial.selectedServices);
-      }
-      return updated;
+    setProposals((prev) => {
+      const targetId = partial.id || proposal?.id || prev[0]?.id;
+      if (!targetId) return prev;
+      return prev.map((p) => {
+        if (p.id === targetId) {
+          const rawServices = partial.selectedServices || partial.services || p.selectedServices;
+          const updated = {
+            ...p,
+            ...partial,
+            selectedServices: rawServices,
+            services: rawServices,
+          };
+          if (targetId === proposal?.id && rawServices) {
+            setServices(rawServices);
+          }
+          return updated;
+        }
+        return p;
+      });
     });
   };
 
@@ -282,10 +357,16 @@ export const AwsProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       return [...prev, code];
     });
 
-    setProposal((prev) => {
-      if (!prev) return null;
-      if (prev.selectedServices.includes(code)) return prev;
-      return { ...prev, selectedServices: [...prev.selectedServices, code] };
+    setProposals((prev) => {
+      if (!proposal) return prev;
+      return prev.map((p) => {
+        if (p.id === proposal.id) {
+          if (p.selectedServices.includes(code)) return p;
+          const nextServices = [...p.selectedServices, code];
+          return { ...p, selectedServices: nextServices, services: nextServices };
+        }
+        return p;
+      });
     });
 
     // Add cost item if not present
@@ -295,7 +376,7 @@ export const AwsProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setCostItems((prev) => {
       const exists = prev.some((ci) => ci.serviceName.toLowerCase().includes(code.toLowerCase()) || (catalogSvc && ci.serviceId === catalogSvc.id));
       if (exists) return prev;
-      
+
       const pricing = catalogSvc?.pricing || { unit: 'hour', price: 0.05, unitLabel: '$0.05 / h' };
       let monthlyCost = 0;
       let formulaText = '';
@@ -340,12 +421,19 @@ export const AwsProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const code = resolveCodeName(nameOrId);
     setServices((prev) => prev.filter((s) => s.toLowerCase() !== code.toLowerCase()));
 
-    setProposal((prev) => {
-      if (!prev) return null;
-      return {
-        ...prev,
-        selectedServices: prev.selectedServices.filter((s) => s.toLowerCase() !== code.toLowerCase()),
-      };
+    setProposals((prev) => {
+      if (!proposal) return prev;
+      return prev.map((p) => {
+        if (p.id === proposal.id) {
+          const nextServices = p.selectedServices.filter((s) => s.toLowerCase() !== code.toLowerCase());
+          return {
+            ...p,
+            selectedServices: nextServices,
+            services: nextServices,
+          };
+        }
+        return p;
+      });
     });
 
     // Remove matching cost items
@@ -386,39 +474,84 @@ export const AwsProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }));
   };
 
+  const addAnalysis = (newAnalysis: ProjectAnalysis) => {
+    setAnalyses((prev) => {
+      const filtered = prev.filter((a) => a.id !== newAnalysis.id);
+      return [newAnalysis, ...filtered].slice(0, 10);
+    });
+  };
+
+  const getAnalysis = (id: string): ProjectAnalysis | undefined => {
+    return analyses.find((a) => a.id === id);
+  };
+
+  const clearAnalyses = () => {
+    setAnalyses([]);
+  };
+
   const resetAll = () => {
-    setProposal(null);
+    setProposals([]);
+    setActiveProposalId(null);
     setServices([]);
     setCostItems([]);
     setSecurityControls(DEFAULT_SECURITY_CONTROLS);
+    setAnalyses([]);
     try {
+      localStorage.removeItem(STORAGE_KEYS.PROPOSALS);
       localStorage.removeItem(STORAGE_KEYS.PROPOSAL);
+      localStorage.removeItem(STORAGE_KEYS.ACTIVE_ID);
       localStorage.removeItem(STORAGE_KEYS.SERVICES);
       localStorage.removeItem(STORAGE_KEYS.COST_ITEMS);
       localStorage.removeItem(STORAGE_KEYS.SECURITY);
+      localStorage.removeItem(STORAGE_KEYS.ANALYSES);
       // Clean legacy keys if any
       localStorage.removeItem('cloudops_proposal_v3');
       localStorage.removeItem('cloudops_services_v3');
       localStorage.removeItem('cloudops_cost_items_v3');
       localStorage.removeItem('cloudops_security_v3');
+      localStorage.removeItem('aws:analyses');
     } catch {
       // ignore
     }
   };
 
   const loadDemo = () => {
-    setProposal(demoProposal);
+    setProposals([demoProposal]);
+    setActiveProposalId(demoProposal.id);
     setServices(demoProposal.selectedServices);
     setCostItems(demoCostItems);
     setSecurityControls(demoSecurityControls);
+    setAnalyses([demoAnalysis]);
   };
 
   // Compatibility aliases
   const addProposal = createProposal;
-  const deleteProposal = (_id: string) => {
-    resetAll();
+  const deleteProposal = (id: string) => {
+    setProposals((prev) => {
+      const filtered = prev.filter((p) => p.id !== id);
+      if (proposal?.id === id) {
+        const next = filtered[0] || null;
+        setActiveProposalId(next ? next.id : null);
+        if (next) {
+          setServices(next.selectedServices || next.services || []);
+        } else {
+          setServices([]);
+          setCostItems([]);
+        }
+      }
+      return filtered;
+    });
   };
-  const setActiveProposalId = (_id: string | null) => {};
+
+  const selectActiveProposal = (id: string | null) => {
+    setActiveProposalId(id);
+    if (id) {
+      const target = proposals.find((p) => p.id === id);
+      if (target) {
+        setServices(target.selectedServices || target.services || []);
+      }
+    }
+  };
   const deleteCostItem = removeCostItem;
   const clearCostItems = () => setCostItems([]);
   const setSelectedRegion = (newRegion: string) => {
@@ -508,7 +641,7 @@ export const AwsProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         loadDemo,
         addProposal,
         deleteProposal,
-        setActiveProposalId,
+        setActiveProposalId: selectActiveProposal,
         deleteCostItem,
         clearCostItems,
         setSelectedRegion,
@@ -519,6 +652,10 @@ export const AwsProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         syncCostsFromProposal,
         resetAllToEmpty,
         loadSampleArchitecture,
+        analyses,
+        addAnalysis,
+        getAnalysis,
+        clearAnalyses,
       }}
     >
       {children}

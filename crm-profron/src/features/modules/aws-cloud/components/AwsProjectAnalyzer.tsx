@@ -4,29 +4,31 @@ import {
   FolderGit2,
   FileText,
   UploadCloud,
-  Check,
   AlertCircle,
   X,
   Loader2,
   CheckCircle2,
   Layers,
-  ArrowRight,
   Info,
 } from 'lucide-react';
-import StatusBadge from './StatusBadge';
+import ProjectAnalysisReport from './ProjectAnalysisReport';
 import { analyzerService } from '../services/analyzerService';
-import { awsServicesCatalog } from '../data/awsServicesData';
+import { useAws } from '../context/AwsContext';
 import type {
   AnalyzerInput,
-  AnalysisResult,
+  ProjectAnalysis,
   CloudProposal,
+  CostSimulationItem,
 } from '../types/awsTypes';
 
 interface AwsProjectAnalyzerProps {
   onApplyToProposal: (draft: {
+    projectName?: string;
     appType: CloudProposal['appType'];
     description: string;
     selectedServices: string[];
+    analysisId?: string;
+    costItems?: CostSimulationItem[];
   }) => void;
 }
 
@@ -50,6 +52,7 @@ const GITHUB_EXAMPLES = [
 
 export default function AwsProjectAnalyzer({ onApplyToProposal }: AwsProjectAnalyzerProps) {
   const fileInputId = useId();
+  const { addAnalysis } = useAws();
   const [activeTab, setActiveTab] = useState<TabType>('zip');
 
   // Estado para entrada ZIP
@@ -67,10 +70,7 @@ export default function AwsProjectAnalyzer({ onApplyToProposal }: AwsProjectAnal
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisStep, setAnalysisStep] = useState<string>('');
   const [analysisError, setAnalysisError] = useState<string | null>(null);
-  const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
-
-  // Checkboxes de servicios recomendados seleccionados
-  const [selectedServiceCodes, setSelectedServiceCodes] = useState<Set<string>>(new Set());
+  const [analysisResult, setAnalysisResult] = useState<ProjectAnalysis | null>(null);
 
   // Control de cancelación
   const cancelRequestedRef = useRef(false);
@@ -145,8 +145,8 @@ export default function AwsProjectAnalyzer({ onApplyToProposal }: AwsProjectAnal
 
     try {
       // 1. Etapa: Lectura de archivos
-      setAnalysisStep('Leyendo archivos del proyecto…');
-      await new Promise((resolve) => setTimeout(resolve, 450));
+      setAnalysisStep('Leyendo archivos…');
+      await new Promise((resolve) => setTimeout(resolve, 300));
       if (cancelRequestedRef.current) return;
 
       let input: AnalyzerInput;
@@ -173,27 +173,36 @@ export default function AwsProjectAnalyzer({ onApplyToProposal }: AwsProjectAnal
       }
 
       // 2. Etapa: Detección de tecnologías
-      setAnalysisStep('Detectando tecnologías y patrones arquitectónicos…');
-      await new Promise((resolve) => setTimeout(resolve, 450));
+      setAnalysisStep('Detectando tecnologías…');
+      await new Promise((resolve) => setTimeout(resolve, 300));
       if (cancelRequestedRef.current) return;
 
-      // 3. Etapa: Generando recomendaciones
-      setAnalysisStep('Generando recomendaciones de servicios AWS…');
+      // 3. Etapa: Evaluación de preparación cloud
+      setAnalysisStep('Evaluando preparación cloud…');
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      if (cancelRequestedRef.current) return;
+
+      // 4. Etapa: Búsqueda de credenciales expuestas
+      setAnalysisStep('Buscando credenciales expuestas…');
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      if (cancelRequestedRef.current) return;
+
+      // 5. Etapa: Generando recomendaciones
+      setAnalysisStep('Generando recomendaciones…');
       const result = await analyzerService.analyze(input);
-      await new Promise((resolve) => setTimeout(resolve, 450));
+      await new Promise((resolve) => setTimeout(resolve, 300));
       if (cancelRequestedRef.current) return;
 
+      addAnalysis(result);
       setAnalysisResult(result);
 
-      // Preseleccionar todos los servicios recomendados
-      const initialCodes = new Set<string>();
-      for (const rec of result.recommendations) {
-        const catSvc = awsServicesCatalog.find((s) => s.id === rec.serviceId);
-        if (catSvc) {
-          initialCodes.add(catSvc.codeName);
-        }
-      }
-      setSelectedServiceCodes(initialCodes);
+      // Desplazamiento suave hasta la ficha técnica
+      setTimeout(() => {
+        document.getElementById('project-analysis-report-section')?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start',
+        });
+      }, 100);
     } catch (err: unknown) {
       if (!cancelRequestedRef.current) {
         setAnalysisError(err instanceof Error ? err.message : 'Error desconocido durante el análisis.');
@@ -210,18 +219,6 @@ export default function AwsProjectAnalyzer({ onApplyToProposal }: AwsProjectAnal
     setAnalysisStep('');
   };
 
-  const handleToggleService = (codeName: string) => {
-    setSelectedServiceCodes((prev) => {
-      const next = new Set(prev);
-      if (next.has(codeName)) {
-        next.delete(codeName);
-      } else {
-        next.add(codeName);
-      }
-      return next;
-    });
-  };
-
   const handleDiscard = () => {
     setAnalysisResult(null);
     setAnalysisError(null);
@@ -229,20 +226,6 @@ export default function AwsProjectAnalyzer({ onApplyToProposal }: AwsProjectAnal
     setGithubUrl('');
     setDocFile(null);
     setDocText('');
-  };
-
-  const handleApply = () => {
-    if (!analysisResult) return;
-
-    // Mapear appType permitido
-    const validAppType: CloudProposal['appType'] =
-      analysisResult.suggestedAppType as CloudProposal['appType'] || 'Portal Web Empresarial';
-
-    onApplyToProposal({
-      appType: validAppType,
-      description: analysisResult.suggestedDescription,
-      selectedServices: Array.from(selectedServiceCodes),
-    });
   };
 
   return (
@@ -656,198 +639,17 @@ export default function AwsProjectAnalyzer({ onApplyToProposal }: AwsProjectAnal
       )}
 
       {/* =========================================================================
-       * RESULTADO DEL ANÁLISIS (BORRADOR REVISABLE)
+       * RESULTADO DEL ANÁLISIS: FICHA TÉCNICA DEL PROYECTO
        * ========================================================================= */}
       {analysisResult && (
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 18,
-            paddingTop: 16,
-            borderTop: '1px solid #f1f5f9',
-          }}
-        >
-          {/* 1. Encabezado de Resumen */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 14, fontWeight: 700, color: '#1e293b' }}>
-                {analysisResult.source}
-              </span>
-              <span style={{ fontSize: 12.5, color: '#64748b' }}>
-                • {analysisResult.filesAnalyzed} archivo{analysisResult.filesAnalyzed === 1 ? '' : 's'} analizado{analysisResult.filesAnalyzed === 1 ? '' : 's'}
-              </span>
-            </div>
-            <StatusBadge variant="neutral">Análisis por reglas</StatusBadge>
-          </div>
-
-          {/* 2. Qué detectamos */}
-          <div>
-            <h4 style={{ fontSize: 13, fontWeight: 700, color: '#334155', margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              Qué detectamos
-            </h4>
-            {analysisResult.detected.length === 0 ? (
-              <p style={{ fontSize: 13, color: '#64748b', margin: 0, fontStyle: 'italic' }}>
-                No encontramos archivos de configuración reconocibles.
-              </p>
-            ) : (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                {analysisResult.detected.map((tech) => (
-                  <div
-                    key={tech.id}
-                    title={`Evidencia: ${tech.evidence.match} en ${tech.evidence.file}`}
-                    style={{
-                      display: 'inline-flex',
-                      flexDirection: 'column',
-                      background: '#f8fafc',
-                      border: '1px solid #e2e8f0',
-                      borderRadius: 10,
-                      padding: '6px 12px',
-                    }}
-                  >
-                    <span style={{ fontSize: 12.5, fontWeight: 700, color: '#1e293b' }}>
-                      {tech.name}
-                    </span>
-                    <span style={{ fontSize: 10.5, color: '#64748b' }}>
-                      {tech.evidence.file}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* 3. Servicios recomendados con Checkbox */}
-          {analysisResult.recommendations.length > 0 && (
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                <h4 style={{ fontSize: 13, fontWeight: 700, color: '#334155', margin: 0, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                  Servicios AWS recomendados
-                </h4>
-                <span style={{ fontSize: 12, color: '#64748b' }}>
-                  {selectedServiceCodes.size} de {analysisResult.recommendations.length} seleccionados
-                </span>
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {analysisResult.recommendations.map((rec) => {
-                  const catalogSvc = awsServicesCatalog.find((s) => s.id === rec.serviceId);
-                  if (!catalogSvc) return null;
-                  const isChecked = selectedServiceCodes.has(catalogSvc.codeName);
-
-                  return (
-                    <label
-                      key={rec.serviceId}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'flex-start',
-                        gap: 12,
-                        padding: '10px 14px',
-                        borderRadius: 10,
-                        border: isChecked ? '1px solid #bfdbfe' : '1px solid #e2e8f0',
-                        background: isChecked ? '#f8fafc' : '#ffffff',
-                        cursor: 'pointer',
-                        transition: 'all 0.15s ease',
-                      }}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={isChecked}
-                        onChange={() => handleToggleService(catalogSvc.codeName)}
-                        style={{ marginTop: 3, cursor: 'pointer', accentColor: '#2563eb' }}
-                      />
-                      <div style={{ flex: 1 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6 }}>
-                          <span style={{ fontSize: 13.5, fontWeight: 700, color: '#1e293b' }}>
-                            {catalogSvc.name} ({catalogSvc.codeName})
-                          </span>
-                          <span style={{ fontSize: 12, fontWeight: 600, color: '#2563eb', background: '#eff6ff', padding: '2px 8px', borderRadius: 6 }}>
-                            {catalogSvc.pricing.unitLabel}
-                          </span>
-                        </div>
-                        <p style={{ fontSize: 12.5, color: '#475569', margin: '3px 0 0' }}>
-                          {rec.reason}
-                        </p>
-                        <span style={{ fontSize: 11, color: '#94a3b8', marginTop: 2, display: 'block' }}>
-                          Disparado por: {rec.triggeredBy.join(', ')}
-                        </span>
-                      </div>
-                    </label>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* 4. No disponibles en este simulador */}
-          {analysisResult.unsupported.length > 0 && (
-            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 12, padding: 14 }}>
-              <h5 style={{ fontSize: 12, fontWeight: 700, color: '#64748b', margin: '0 0 6px', textTransform: 'uppercase' }}>
-                No disponibles en este simulador
-              </h5>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                {analysisResult.unsupported.map((uns) => (
-                  <div key={uns.name} style={{ fontSize: 12, color: '#64748b' }}>
-                    <strong style={{ color: '#475569' }}>{uns.name}:</strong> sugerido en AWS:{' '}
-                    <span style={{ color: '#1e293b', fontWeight: 600 }}>{uns.suggestedAwsService}</span>. {uns.note}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* 5. Advertencias si existen */}
-          {analysisResult.warnings.length > 0 && (
-            <div style={{ background: '#fffbeb', border: '1px solid #fef3c7', borderRadius: 10, padding: 12 }}>
-              {analysisResult.warnings.map((w) => (
-                <p key={w} style={{ fontSize: 12.5, color: '#92400e', margin: 0 }}>
-                  ⚠️ {w}
-                </p>
-              ))}
-            </div>
-          )}
-
-          {/* 6. Botones de Acción */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 12, marginTop: 4 }}>
-            <button
-              type="button"
-              onClick={handleDiscard}
-              style={{
-                padding: '9px 18px',
-                borderRadius: 8,
-                fontSize: 13,
-                fontWeight: 600,
-                border: '1px solid #cbd5e1',
-                background: '#ffffff',
-                color: '#64748b',
-                cursor: 'pointer',
-              }}
-            >
-              Descartar
-            </button>
-            <button
-              type="button"
-              onClick={handleApply}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 8,
-                padding: '9px 20px',
-                borderRadius: 8,
-                fontSize: 13,
-                fontWeight: 600,
-                border: 'none',
-                background: '#2563eb',
-                color: '#ffffff',
-                cursor: 'pointer',
-                boxShadow: '0 2px 4px rgba(37,99,235,0.25)',
-              }}
-            >
-              <Check size={16} />
-              Usar en mi propuesta
-              <ArrowRight size={14} />
-            </button>
-          </div>
+        <div id="project-analysis-report-section" style={{ scrollMarginTop: 80, marginTop: 16 }}>
+          <ProjectAnalysisReport
+            analysis={analysisResult}
+            onApplyToProposal={(draft) => {
+              onApplyToProposal(draft);
+            }}
+            onResetAnalysis={handleDiscard}
+          />
         </div>
       )}
     </div>

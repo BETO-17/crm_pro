@@ -48,41 +48,41 @@ const quickPromptCategories: {
   label: string;
   prompts: string[];
 }[] = [
-  {
-    icon: <Layers size={13} />,
-    label: 'Arquitectura',
-    prompts: [
-      'Crear arquitectura E-commerce Retail (Alta Disponibilidad)',
-      'Diseñar arquitectura Serverless para Data Lake & Analítica',
-      'Estructurar API Backend con microservicios escalables',
-    ],
-  },
-  {
-    icon: <Shield size={13} />,
-    label: 'Seguridad',
-    prompts: [
-      'Auditar mi postura de seguridad y corregir brechas',
-      '¿Qué controles me faltan para llegar a 100/100 en seguridad?',
-    ],
-  },
-  {
-    icon: <Globe size={13} />,
-    label: 'Regiones',
-    prompts: [
-      'Recomiéndame la mejor región para Perú y LATAM',
-      '¿Cuál es la región más económica de AWS?',
-      'Región con cumplimiento GDPR / Soberanía Europea',
-    ],
-  },
-  {
-    icon: <DollarSign size={13} />,
-    label: 'Costos',
-    prompts: [
-      '¿Cómo optimizar mis costos mensuales en AWS?',
-      'Calcular arquitectura económica de bajo presupuesto',
-    ],
-  },
-];
+    {
+      icon: <Layers size={13} />,
+      label: 'Arquitectura',
+      prompts: [
+        'Crear arquitectura E-commerce Retail (Alta Disponibilidad)',
+        'Diseñar arquitectura Serverless para Data Lake & Analítica',
+        'Estructurar API Backend con microservicios escalables',
+      ],
+    },
+    {
+      icon: <Shield size={13} />,
+      label: 'Seguridad',
+      prompts: [
+        'Auditar mi postura de seguridad y corregir brechas',
+        '¿Qué controles me faltan para llegar a 100/100 en seguridad?',
+      ],
+    },
+    {
+      icon: <Globe size={13} />,
+      label: 'Regiones',
+      prompts: [
+        'Recomiéndame la mejor región para Perú y LATAM',
+        '¿Cuál es la región más económica de AWS?',
+        'Región con cumplimiento GDPR / Soberanía Europea',
+      ],
+    },
+    {
+      icon: <DollarSign size={13} />,
+      label: 'Costos',
+      prompts: [
+        '¿Cómo optimizar mis costos mensuales en AWS?',
+        'Calcular arquitectura económica de bajo presupuesto',
+      ],
+    },
+  ];
 
 export default function AwsAiRegionAdvisor({ isOpen, onClose }: AwsAiRegionAdvisorProps) {
   const {

@@ -452,13 +452,26 @@ const TECH_RULES: TechRule[] = [
   },
 ];
 
+export interface StackDetectionResult {
+  source: 'zip' | 'github' | 'document';
+  sourceLabel: string;
+  filesAnalyzed: number;
+  detected: DetectedTech[];
+  recommendations: ServiceRecommendation[];
+  unsupported: UnsupportedTech[];
+  suggestedAppType: string;
+  suggestedDescription: string;
+  warnings: string[];
+}
+
 /**
  * Motor puro de detección de stack tecnológico a partir de archivos de proyecto.
  */
 export function detectStackFromFiles(
   files: ProjectFile[],
-  sourceLabel: string
-): AnalysisResult {
+  sourceLabel: string,
+  source: 'zip' | 'github' | 'document' = 'zip'
+): StackDetectionResult {
   const detected: DetectedTech[] = [];
   const recommendationMap = new Map<string, { serviceId: string; reason: string; triggeredBy: Set<string> }>();
   const unsupportedList: UnsupportedTech[] = [];
@@ -542,7 +555,8 @@ export function detectStackFromFiles(
   // Si no se detectó nada
   if (detected.length === 0) {
     return {
-      source: sourceLabel,
+      source,
+      sourceLabel,
       filesAnalyzed: files.length,
       detected: [],
       recommendations: [],
@@ -635,7 +649,8 @@ export function detectStackFromFiles(
   }
 
   return {
-    source: sourceLabel,
+    source,
+    sourceLabel,
     filesAnalyzed: files.length,
     detected,
     recommendations,

@@ -61,6 +61,7 @@ export interface CloudProposal {
   createdAt: string;
   status: 'Aprobada' | 'En Revisión' | 'Borrador' | 'Rechazada' | 'Requiere Ajustes';
   services?: string[]; // Alias compatible para selectedServices
+  analysisId?: string; // ID del análisis de proyecto origen si fue importado
 }
 
 export type AwsProposal = CloudProposal;
@@ -153,13 +154,153 @@ export interface UnsupportedTech {
   note: string;
 }
 
-export interface AnalysisResult {
-  source: string;
+export type ReadinessDimensionId =
+  | 'docs'
+  | 'structure'
+  | 'dependencies'
+  | 'tests'
+  | 'codeQuality'
+  | 'containers'
+  | 'security'
+  | 'cicd'
+  | 'governance';
+
+export interface ReadinessCheck {
+  id: string;
+  label: string;
+  points: number;
+  maxPoints: number;
+  passed: boolean;
+  evidence?: string;
+}
+
+export interface ReadinessDimension {
+  id: ReadinessDimensionId;
+  label: string;
+  score: number;
+  maxScore: number;
+  checks: ReadinessCheck[];
+}
+
+export type Severity = 'critical' | 'medium' | 'low';
+
+export interface Finding {
+  id: string;
+  dimension: ReadinessDimensionId;
+  severity: Severity;
+  title: string;
+  evidence: string;
+  recommendation: string;
+}
+
+export interface Strength {
+  id: string;
+  dimension: ReadinessDimensionId;
+  title: string;
+  evidence: string;
+}
+
+export type ReadinessStatus = 'ready' | 'ready-with-notes' | 'needs-preparation';
+
+export type Confidence = 'high' | 'low';
+
+export interface MigrationStrategy {
+  id: 'rehost' | 'replatform' | 'refactor';
+  label: string;
+  description: string;
+}
+
+export interface PreMigrationTask {
+  title: string;
+  fromFindingId: string;
+  severity: Severity;
+}
+
+export type MaturityLevel = 'prototype' | 'mvp' | 'active' | 'production';
+
+export interface MaturitySignal {
+  label: string;
+  value: string | number;
+  evidence?: string;
+}
+
+export interface ProjectMaturity {
+  level: MaturityLevel;
+  label: string;
+  signals: MaturitySignal[];
+}
+
+export interface ProjectMetrics {
+  totalFiles: number;
+  codeFiles: number;
+  linesOfCode: number;
+  modules: number;
+  routesOrEndpoints: number;
+  dbMigrations: number;
+  todoCount: number;
+  lastCommitDate?: string;
+  commitsLast90Days?: number;
+  contributors?: number;
+  releases?: number;
+  openIssues?: number;
+}
+
+export interface SecurityCheck {
+  id: string;
+  label: string;
+  points: number;
+  maxPoints: number;
+  passed: boolean;
+  notVerifiable?: boolean;
+  evidence?: string;
+  note?: string;
+}
+
+export interface GovernanceCheck {
+  id: string;
+  label: string;
+  points: number;
+  maxPoints: number;
+  passed: boolean;
+  notVerifiable?: boolean;
+  evidence?: string;
+  note?: string;
+}
+
+export interface ProjectAnalysis {
+  id: string;
+  createdAt: string;
+  projectName: string;
+  source: 'zip' | 'github' | 'document';
+  sourceLabel: string;
   filesAnalyzed: number;
-  detected: DetectedTech[];
+  totalFiles: number;
+  confidence: Confidence;
+  isEstimated: boolean;
+  partialSecretScan: boolean;
+  score: number; // overallScore (0–100)
+  overallScore: number; // Promedio ponderado: Cloud 35%, Seguridad 35%, Gestión 30%
+  readinessScore: number; // Índice de preparación Cloud (0-100)
+  securityScore: number; // Índice de Seguridad (0-100)
+  governanceScore: number; // Índice de Gestión y Control (0-100)
+  maturity: ProjectMaturity;
+  metrics: ProjectMetrics;
+  securityChecks?: SecurityCheck[];
+  governanceChecks?: GovernanceCheck[];
+  status: ReadinessStatus;
+  dimensions: ReadinessDimension[];
+  strengths: Strength[];
+  findings: Finding[];
+  stack: DetectedTech[];
+  detected: DetectedTech[]; // compatibility alias
   recommendations: ServiceRecommendation[];
   unsupported: UnsupportedTech[];
+  preMigrationTasks: PreMigrationTask[];
+  strategy: MigrationStrategy;
   suggestedAppType: string;
   suggestedDescription: string;
   warnings: string[];
 }
+
+export type AnalysisResult = ProjectAnalysis;
+

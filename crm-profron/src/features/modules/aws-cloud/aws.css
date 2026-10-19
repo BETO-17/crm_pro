@@ -278,7 +278,9 @@
     transform: scale(0.9);
     opacity: 0.9;
   }
-  70%, 100% {
+
+  70%,
+  100% {
     transform: scale(2.4);
     opacity: 0;
   }
@@ -288,6 +290,7 @@
   0% {
     transform: rotate(0deg);
   }
+
   100% {
     transform: rotate(360deg);
   }
@@ -297,15 +300,19 @@
   0% {
     stroke-dashoffset: 60;
   }
+
   100% {
     stroke-dashoffset: 0;
   }
 }
 
 @keyframes pulseGlow {
-  0%, 100% {
+
+  0%,
+  100% {
     filter: drop-shadow(0 0 6px rgba(59, 130, 246, 0.7));
   }
+
   50% {
     filter: drop-shadow(0 0 16px rgba(96, 165, 250, 0.95));
   }
@@ -367,10 +374,21 @@
   box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
 }
 
-.aws-quick-card.quick-network:hover { border-color: #3b82f6; }
-.aws-quick-card.quick-infra:hover { border-color: #10b981; }
-.aws-quick-card.quick-sec:hover { border-color: #ef4444; }
-.aws-quick-card.quick-catalog:hover { border-color: #f59e0b; }
+.aws-quick-card.quick-network:hover {
+  border-color: #3b82f6;
+}
+
+.aws-quick-card.quick-infra:hover {
+  border-color: #10b981;
+}
+
+.aws-quick-card.quick-sec:hover {
+  border-color: #ef4444;
+}
+
+.aws-quick-card.quick-catalog:hover {
+  border-color: #f59e0b;
+}
 
 .aws-quick-card .quick-arrow {
   transition: transform 0.2s ease;
@@ -398,8 +416,15 @@
 }
 
 @keyframes dropdownFadeIn {
-  from { opacity: 0; transform: translateY(-8px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .aws-dropdown-item {
@@ -439,8 +464,13 @@
 }
 
 @keyframes overlayFadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 .aws-modal-content {
@@ -458,8 +488,15 @@
 }
 
 @keyframes modalScaleUp {
-  from { opacity: 0; transform: scale(0.94); }
-  to { opacity: 1; transform: scale(1); }
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 .aws-modal-header {
@@ -599,6 +636,7 @@
 }
 
 @media (max-width: 639px) {
+
   .aws-responsive-grid-4,
   .aws-responsive-grid-3,
   .aws-responsive-grid-2 {
@@ -614,16 +652,12 @@
   }
 
   /* Touch Target minimum height on mobile */
-  button, 
-  input, 
-  select, 
+  button,
+  input,
+  select,
   .sidebar-nav-item,
   .topbar-region-btn,
   .topbar-ai-pill-btn {
     min-height: 40px;
   }
 }
-
-
-
-

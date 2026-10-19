@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   FileText,
@@ -17,13 +17,27 @@ import {
   Network,
   Download,
   FileJson,
+  FileSearch,
 } from 'lucide-react';
-import type { CloudProposal } from '../types/awsTypes';
+import type { CloudProposal, ProjectAnalysis, CostSimulationItem } from '../types/awsTypes';
 import { awsServicesCatalog } from '../data/awsServicesData';
 import { useAws } from '../context/AwsContext';
 import { downloadFossflowDiagram } from '../utils/fossflowExport';
 import AwsProjectAnalyzer from '../components/AwsProjectAnalyzer';
+import ProjectAnalysisReport from '../components/ProjectAnalysisReport';
+import StatusBadge from '../components/StatusBadge';
 import '../aws.css';
+
+function formatShortDate(dateStr?: string): string {
+  if (!dateStr) return '';
+  const clean = dateStr.includes('T') ? dateStr.split('T')[0] : dateStr;
+  const parts = clean.split('-');
+  if (parts.length === 3) {
+    const [y, m, d] = parts;
+    return `${d}/${m}/${y.slice(-2)}`;
+  }
+  return clean;
+}
 
 // Predefined Optional Templates (User can click one to prefill description, type & services)
 const proposalTemplates = [
@@ -84,6 +98,9 @@ export default function AwsPlanning() {
     addService,
     toggleService,
     removeService,
+    analyses,
+    getAnalysis,
+    addCostItem,
   } = useAws();
 
   const navigate = useNavigate();
@@ -101,6 +118,9 @@ export default function AwsPlanning() {
   // Estado del Analizador de Proyectos
   const [isAnalyzerOpen, setIsAnalyzerOpen] = useState(false);
   const [_cameFromAnalyzer, setCameFromAnalyzer] = useState(false);
+  const [currentAnalysisId, setCurrentAnalysisId] = useState<string | null>(null);
+  const [analysisCostItems, setAnalysisCostItems] = useState<CostSimulationItem[] | null>(null);
+  const [selectedAnalysisForModal, setSelectedAnalysisForModal] = useState<ProjectAnalysis | null>(null);
 
   // Form Fields - All start completely empty / unselected by default
   const [solutionName, setSolutionName] = useState('');
@@ -142,11 +162,20 @@ export default function AwsPlanning() {
       isRegistration: !!isRegistration,
     });
 
-    const duration = isRegistration ? 8500 : (actionObj ? 6500 : 3500);
+    const duration = isRegistration ? 10000 : (actionObj ? 6500 : 3500);
     setTimeout(() => {
       setToast((prev) => (prev?.msg === msg ? null : prev));
     }, duration);
   };
+
+  const sortedProposals = useMemo(() => {
+    return [...proposals].sort((a, b) => {
+      const timeA = new Date(a.createdAt || 0).getTime() || 0;
+      const timeB = new Date(b.createdAt || 0).getTime() || 0;
+      if (timeA !== timeB) return timeB - timeA;
+      return b.id.localeCompare(a.id);
+    });
+  }, [proposals]);
 
   const handleGoToDiagram = () => {
     try {
@@ -158,13 +187,25 @@ export default function AwsPlanning() {
   };
 
   const handleApplyAnalyzerResult = (draft: {
+    projectName?: string;
     appType: CloudProposal['appType'];
     description: string;
     selectedServices: string[];
+    analysisId?: string;
+    costItems?: CostSimulationItem[];
   }) => {
     setCameFromAnalyzer(true);
+    if (draft.projectName) {
+      setSolutionName(draft.projectName);
+    }
     setAppType(draft.appType);
     setDescription(draft.description);
+    if (draft.analysisId) {
+      setCurrentAnalysisId(draft.analysisId);
+    }
+    if (draft.costItems && draft.costItems.length > 0) {
+      setAnalysisCostItems(draft.costItems);
+    }
 
     // Agregar servicios sugeridos a la selección
     for (const svcCode of draft.selectedServices) {
@@ -176,6 +217,7 @@ export default function AwsPlanning() {
     // Limpiar errores en esos campos
     setErrors((prev) => {
       const copy = { ...prev };
+      delete copy.solutionName;
       delete copy.description;
       delete copy.appType;
       delete copy.services;
@@ -188,7 +230,7 @@ export default function AwsPlanning() {
       formCard.scrollIntoView({ behavior: 'smooth' });
     }
 
-    showToast('Revisa la región, usuarios, SLA y objetivo, y registra tu propuesta');
+    showToast('Completa región, usuarios, SLA y objetivo, y registra tu propuesta');
   };
 
   const handleApplyTemplate = (tpl: typeof proposalTemplates[0]) => {
@@ -336,9 +378,17 @@ export default function AwsPlanning() {
         annualBudget: calculatedAnnual,
         status: 'Aprobada',
         createdAt: new Date().toISOString(),
+        analysisId: currentAnalysisId || undefined,
       };
 
       createProposal(newProp);
+
+      // Si vinieron supuestos de costos del análisis, guardarlos en la simulación de costos
+      if (analysisCostItems && analysisCostItems.length > 0) {
+        for (const item of analysisCostItems) {
+          addCostItem(item);
+        }
+      }
 
       showToast('Propuesta registrada', newProp, true);
       setSolutionName('');
@@ -350,10 +400,14 @@ export default function AwsPlanning() {
       setMigrationGoal('');
       setSelectedTemplateId(null);
       setCameFromAnalyzer(false);
+      setCurrentAnalysisId(null);
+      setAnalysisCostItems(null);
     }
   };
 
   const handleDelete = (id: string, name: string) => {
+    const confirmed = window.confirm(`¿Estás seguro de que deseas eliminar la propuesta "${name}"?`);
+    if (!confirmed) return;
     deleteProposal(id);
     if (editingProposalId === id) {
       handleCancelEdit();
@@ -373,91 +427,136 @@ export default function AwsPlanning() {
             background: '#0f172a',
             border: '1px solid #2563eb',
             color: '#ffffff',
-            padding: '12px 18px',
+            padding: '14px 18px',
             borderRadius: 12,
-            boxShadow: '0 10px 30px rgba(0,0,0,0.3)',
+            boxShadow: '0 10px 30px rgba(0,0,0,0.35)',
             zIndex: 9999,
             fontWeight: 600,
             fontSize: 13,
             display: 'flex',
             alignItems: 'center',
-            gap: 12,
-            maxWidth: 580,
+            gap: 14,
+            maxWidth: 620,
           }}
         >
-          <Sparkles size={16} color="#60a5fa" style={{ flexShrink: 0 }} />
-          <span style={{ flex: 1, color: '#f1f5f9' }}>{toast.msg}</span>
+          <Sparkles size={18} color="#60a5fa" style={{ flexShrink: 0 }} />
 
-          {toast.isRegistration && toast.proposal && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-              <button
-                type="button"
-                onClick={() => downloadFossflowDiagram(toast.proposal!, awsServicesCatalog)}
-                style={{
-                  background: '#2563eb',
-                  color: '#ffffff',
-                  border: 'none',
-                  borderRadius: 6,
-                  padding: '5px 11px',
-                  fontSize: 11.5,
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  whiteSpace: 'nowrap',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 5,
-                  boxShadow: '0 1px 3px rgba(37,99,235,0.4)',
-                }}
-              >
-                <Download size={13} />
-                Descargar diagrama
-              </button>
-              <button
-                type="button"
-                onClick={handleGoToDiagram}
-                style={{
-                  background: '#334155',
-                  color: '#f8fafc',
-                  border: '1px solid #475569',
-                  borderRadius: 6,
-                  padding: '5px 11px',
-                  fontSize: 11.5,
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  whiteSpace: 'nowrap',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 5,
-                }}
-              >
-                <Network size={13} />
-                Ir al editor
-              </button>
+          {toast.isRegistration && toast.proposal ? (
+            (() => {
+              const pServices = toast.proposal.selectedServices || toast.proposal.services || [];
+              const sCount = pServices.length;
+              const sCountText = `${sCount} ${sCount === 1 ? 'servicio' : 'servicios'}`;
+              const reg = toast.proposal.region ? (toast.proposal.region.split(' ')[0] || toast.proposal.region) : 'Sin región';
+
+              return (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14, flex: 1, minWidth: 0, flexWrap: 'wrap' }}>
+                  {/* Texto: Título "Propuesta registrada" y debajo "<Nombre> · <región> · <n> servicios" */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 160, flex: 1 }}>
+                    <span style={{ fontSize: 13.5, fontWeight: 700, color: '#f8fafc' }}>
+                      Propuesta registrada
+                    </span>
+                    <span style={{ fontSize: 12, color: '#94a3b8', lineHeight: 1.3 }}>
+                      <strong style={{ color: '#e2e8f0', fontWeight: 600 }}>{toast.proposal.solutionName}</strong> · {reg} · {sCountText}
+                    </span>
+                  </div>
+
+                  {/* Dos botones: "Descargar diagrama" (principal) e "Ir al editor" (secundario) */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                    <button
+                      type="button"
+                      disabled={sCount === 0}
+                      onClick={() => {
+                        if (sCount > 0) {
+                          downloadFossflowDiagram(toast.proposal!, awsServicesCatalog);
+                        }
+                      }}
+                      title={sCount === 0 ? 'Agrega servicios a tu propuesta para generar el diagrama' : 'Descargar diagrama (.json)'}
+                      style={{
+                        background: sCount > 0 ? '#2563eb' : '#3b82f6',
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: 6,
+                        padding: '6px 12px',
+                        fontSize: 12,
+                        fontWeight: 700,
+                        cursor: sCount > 0 ? 'pointer' : 'not-allowed',
+                        opacity: sCount > 0 ? 1 : 0.5,
+                        whiteSpace: 'nowrap',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        boxShadow: sCount > 0 ? '0 1px 3px rgba(37,99,235,0.4)' : 'none',
+                        transition: 'all 0.15s ease',
+                      }}
+                      onMouseEnter={(e) => {
+                        if (sCount > 0) e.currentTarget.style.background = '#1d4ed8';
+                      }}
+                      onMouseLeave={(e) => {
+                        if (sCount > 0) e.currentTarget.style.background = '#2563eb';
+                      }}
+                    >
+                      <Download size={14} />
+                      Descargar diagrama
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleGoToDiagram}
+                      style={{
+                        background: '#334155',
+                        color: '#f8fafc',
+                        border: '1px solid #475569',
+                        borderRadius: 6,
+                        padding: '6px 12px',
+                        fontSize: 12,
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        transition: 'all 0.15s ease',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = '#475569';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = '#334155';
+                      }}
+                    >
+                      <Network size={14} />
+                      Ir al editor
+                    </button>
+                  </div>
+                </div>
+              );
+            })()
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1, minWidth: 0 }}>
+              <span style={{ flex: 1, color: '#f1f5f9' }}>{toast.msg}</span>
+              {toast.action && (
+                <button
+                  type="button"
+                  onClick={toast.action.onClick}
+                  style={{
+                    background: '#2563eb',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: 6,
+                    padding: '5px 12px',
+                    fontSize: 11.5,
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 5,
+                  }}
+                >
+                  <Network size={13} />
+                  {toast.action.label}
+                </button>
+              )}
             </div>
-          )}
-
-          {toast.action && !toast.isRegistration && (
-            <button
-              type="button"
-              onClick={toast.action.onClick}
-              style={{
-                background: '#2563eb',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: 6,
-                padding: '5px 12px',
-                fontSize: 11.5,
-                fontWeight: 700,
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 5,
-              }}
-            >
-              <Network size={13} />
-              {toast.action.label}
-            </button>
           )}
 
           <button
@@ -469,12 +568,15 @@ export default function AwsPlanning() {
               border: 'none',
               color: '#94a3b8',
               cursor: 'pointer',
-              padding: 2,
+              padding: 4,
               display: 'flex',
               alignItems: 'center',
+              borderRadius: 4,
             }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = '#ffffff')}
+            onMouseLeave={(e) => (e.currentTarget.style.color = '#94a3b8')}
           >
-            <X size={15} />
+            <X size={16} />
           </button>
         </div>
       )}
@@ -485,7 +587,7 @@ export default function AwsPlanning() {
           Planificación Cloud
         </h1>
         <p style={{ fontSize: 13, color: '#64748b', margin: 0 }}>
-          Diseña y registra propuestas comerciales de arquitectura seleccionando opciones predeterminadas con 1 clic.
+          Diseña y registra propuestas de arquitectura en AWS. Puedes partir de una plantilla o importar tu proyecto.
         </p>
       </div>
 
@@ -995,13 +1097,15 @@ export default function AwsPlanning() {
             background: '#ffffff',
             border: '1px solid #e2e8f0',
             borderRadius: 14,
-            padding: '22px',
+            padding: '20px',
             boxShadow: '0 2px 6px rgba(0, 0, 0, 0.02)',
             display: 'flex',
             flexDirection: 'column',
             position: 'sticky',
             top: 24,
             alignSelf: 'start',
+            minWidth: 0,
+            maxWidth: '100%',
           }}
         >
           {/* Header: "Propuestas registradas" + badge with count */}
@@ -1009,285 +1113,336 @@ export default function AwsPlanning() {
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: 10,
-              paddingBottom: 16,
+              justifyContent: 'space-between',
+              paddingBottom: 14,
               borderBottom: '1px solid #f1f5f9',
-              marginBottom: 16,
+              marginBottom: 14,
             }}
           >
-            <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#1e293b' }}>
-              Propuestas registradas
-            </h3>
-            <span
-              style={{
-                border: '1px solid #e2e8f0',
-                borderRadius: 6,
-                padding: '2px 8px',
-                fontSize: 12,
-                fontWeight: 600,
-                color: '#64748b',
-                background: '#ffffff',
-                lineHeight: 1.2,
-              }}
-            >
-              {proposals.length}
-            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <h3 style={{ margin: 0, fontSize: 15.5, fontWeight: 700, color: '#1e293b' }}>
+                Propuestas registradas
+              </h3>
+              <span
+                style={{
+                  border: '1px solid #e2e8f0',
+                  borderRadius: 6,
+                  padding: '2px 8px',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  color: '#64748b',
+                  background: '#f8fafc',
+                  lineHeight: 1.2,
+                }}
+              >
+                {sortedProposals.length}
+              </span>
+            </div>
           </div>
 
-          {/* Table Container */}
-          <div style={{ borderRadius: 8, overflow: 'hidden' }}>
-            {/* Table Header: Propuesta | Acciones */}
-            <div
-              style={{
-                background: '#f8fafc',
-                padding: '12px 18px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                borderBottom: '1px solid #e2e8f0',
-              }}
-            >
-              <span style={{ fontSize: 13, fontWeight: 600, color: '#64748b' }}>Propuesta</span>
-              <span style={{ fontSize: 13, fontWeight: 600, color: '#64748b' }}>Acciones</span>
-            </div>
+          {/* Table / List Container (overflow-x-auto prevents any row from overflowing the card) */}
+          <div style={{ width: '100%', overflowX: 'auto' }}>
+            {sortedProposals.length > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, minWidth: 260 }}>
+                {sortedProposals.map((prop) => {
+                  const isActive =
+                    prop.id === activeProposalId ||
+                    (!activeProposalId && sortedProposals[0]?.id === prop.id);
+                  const propServices = prop.selectedServices || prop.services || [];
+                  const sCount = propServices.length;
+                  const sCountText = `${sCount} ${sCount === 1 ? 'servicio' : 'servicios'}`;
+                  const reg = prop.region
+                    ? prop.region.split(' ')[0] || prop.region
+                    : 'Sin región';
+                  const shortDate = formatShortDate(prop.createdAt) || 'Hoy';
+                  const hasServices = sCount > 0;
 
-            {/* Proposal Rows */}
-            {proposals.length > 0 ? (
-              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                {proposals.map((prop, idx) => {
-                  const isActive = prop.id === activeProposalId || (!activeProposalId && proposals[0]?.id === prop.id);
                   return (
                     <div
                       key={prop.id}
                       style={{
                         display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        padding: '14px 16px',
-                        borderBottom: idx < proposals.length - 1 ? '1px solid #f1f5f9' : 'none',
-                        background: isActive ? '#fbfcfe' : '#ffffff',
-                        transition: 'background 0.15s ease',
+                        flexDirection: 'column',
+                        gap: 10,
+                        padding: '13px 15px',
+                        borderRadius: 10,
+                        border: isActive ? '1px solid #93c5fd' : '1px solid #e2e8f0',
+                        background: isActive ? '#f8faff' : '#ffffff',
+                        boxShadow: isActive ? '0 1px 3px rgba(37, 99, 235, 0.08)' : 'none',
+                        transition: 'all 0.15s ease',
                       }}
                     >
-                      {/* Left Column: Solution Name in Bold + Region underneath */}
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <span
+                      {/* Top Row: Solution Name (bold) + Subtitle on left, Status on right */}
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'flex-start',
+                          justifyContent: 'space-between',
+                          gap: 8,
+                        }}
+                      >
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                          <div
                             style={{
                               fontSize: 13.5,
-                              fontWeight: 800,
+                              fontWeight: 700,
                               color: '#1e293b',
-                              letterSpacing: '-0.2px',
+                              wordBreak: 'break-word',
+                              lineHeight: 1.35,
                             }}
                           >
-                            {prop.solutionName.toUpperCase()}
-                          </span>
-                          {isActive && (
-                            <span
+                            {prop.solutionName}
+                          </div>
+                          <div
+                            style={{
+                              fontSize: 11.5,
+                              color: '#64748b',
+                              marginTop: 2,
+                              lineHeight: 1.3,
+                            }}
+                          >
+                            {reg} · {sCountText} · {shortDate}
+                          </div>
+                        </div>
+
+                        {/* Estado: SOLO StatusBadge success "Activa" si es la activa; si no, botón pequeño "Activar" */}
+                        <div style={{ flexShrink: 0 }}>
+                          {isActive ? (
+                            <StatusBadge variant="success" size="sm">
+                              Activa
+                            </StatusBadge>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setActiveProposalId(prop.id);
+                                showToast(`"${prop.solutionName}" establecida como propuesta activa.`);
+                              }}
+                              title="Establecer como propuesta activa"
                               style={{
                                 background: '#eff6ff',
-                                color: '#2563eb',
                                 border: '1px solid #bfdbfe',
-                                padding: '1px 6px',
-                                borderRadius: 4,
-                                fontSize: 10,
-                                fontWeight: 700,
+                                color: '#2563eb',
+                                padding: '3px 8px',
+                                borderRadius: 6,
+                                fontSize: 11,
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                                transition: 'all 0.15s ease',
+                                lineHeight: 1.2,
                               }}
+                              onMouseEnter={(e) => (e.currentTarget.style.background = '#dbeafe')}
+                              onMouseLeave={(e) => (e.currentTarget.style.background = '#eff6ff')}
                             >
-                              Activa
-                            </span>
+                              Activar
+                            </button>
                           )}
                         </div>
-                        <span style={{ fontSize: 12, color: '#64748b' }}>
-                          {prop.region.split(' ')[0] || prop.region}
-                        </span>
                       </div>
 
-                      {/* Right Column: Actions (Eye, Edit, Hacer Activa button, Diagrama, JSON, Trash) */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                        {/* Eye Icon (Ver Detalles) */}
+                      {/* Bottom Row: Acciones como botones de icono con tooltip (iconos de Lucide, 32px, gap-1) */}
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'flex-end',
+                          gap: 4,
+                          paddingTop: 8,
+                          borderTop: '1px solid #f1f5f9',
+                        }}
+                      >
+                        {/* Ver análisis (FileSearch) solo si la propuesta tiene analysisId */}
+                        {prop.analysisId && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const found = getAnalysis(prop.analysisId!) || analyses.find((a) => a.id === prop.analysisId);
+                              if (found) {
+                                setSelectedAnalysisForModal(found);
+                              } else {
+                                showToast('No se encontró el análisis técnico asociado a esta propuesta.');
+                              }
+                            }}
+                            title="Ver análisis"
+                            style={{
+                              width: 32,
+                              height: 32,
+                              minWidth: 32,
+                              minHeight: 32,
+                              padding: 0,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              borderRadius: 6,
+                              border: '1px solid #bfdbfe',
+                              background: '#eff6ff',
+                              color: '#2563eb',
+                              cursor: 'pointer',
+                              transition: 'all 0.15s ease',
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.background = '#dbeafe';
+                              e.currentTarget.style.color = '#1d4ed8';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.background = '#eff6ff';
+                              e.currentTarget.style.color = '#2563eb';
+                            }}
+                          >
+                            <FileSearch size={16} />
+                          </button>
+                        )}
+
+                        {/* Ver (Eye) */}
                         <button
                           type="button"
                           onClick={() => setSelectedDetailProp(prop)}
                           title="Ver detalles de propuesta"
                           style={{
-                            background: 'none',
-                            border: 'none',
-                            cursor: 'pointer',
-                            color: '#64748b',
-                            padding: 4,
+                            width: 32,
+                            height: 32,
+                            minWidth: 32,
+                            minHeight: 32,
+                            padding: 0,
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
                             borderRadius: 6,
-                            transition: 'color 0.15s ease',
+                            border: '1px solid #e2e8f0',
+                            background: '#f8fafc',
+                            color: '#64748b',
+                            cursor: 'pointer',
+                            transition: 'all 0.15s ease',
                           }}
-                          onMouseEnter={(e) => (e.currentTarget.style.color = '#2563eb')}
-                          onMouseLeave={(e) => (e.currentTarget.style.color = '#64748b')}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = '#eff6ff';
+                            e.currentTarget.style.color = '#2563eb';
+                            e.currentTarget.style.borderColor = '#bfdbfe';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = '#f8fafc';
+                            e.currentTarget.style.color = '#64748b';
+                            e.currentTarget.style.borderColor = '#e2e8f0';
+                          }}
                         >
                           <Eye size={16} />
                         </button>
 
-                        {/* Edit Icon (Editar) */}
+                        {/* Editar (Pencil) */}
                         <button
                           type="button"
                           onClick={() => handleStartEdit(prop)}
                           title="Editar propuesta"
                           style={{
-                            background: 'none',
-                            border: 'none',
-                            cursor: 'pointer',
-                            color: '#64748b',
-                            padding: 4,
+                            width: 32,
+                            height: 32,
+                            minWidth: 32,
+                            minHeight: 32,
+                            padding: 0,
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
                             borderRadius: 6,
-                            transition: 'color 0.15s ease',
-                          }}
-                          onMouseEnter={(e) => (e.currentTarget.style.color = '#2563eb')}
-                          onMouseLeave={(e) => (e.currentTarget.style.color = '#64748b')}
-                        >
-                          <Pencil size={16} />
-                        </button>
-
-                        {/* Botón "Hacer Activa" / "Activa" */}
-                        {isActive ? (
-                          <span
-                            style={{
-                              background: '#eff6ff',
-                              border: '1px solid #bfdbfe',
-                              color: '#2563eb',
-                              padding: '3px 8px',
-                              borderRadius: 6,
-                              fontSize: 11,
-                              fontWeight: 700,
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: 4,
-                            }}
-                          >
-                            <Check size={11} strokeWidth={2.5} /> Activa
-                          </span>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setActiveProposalId(prop.id);
-                              showToast(`"${prop.solutionName}" establecida como propuesta activa.`);
-                            }}
-                            style={{
-                              background: '#eff6ff',
-                              border: '1px solid #bfdbfe',
-                              color: '#1d4ed8',
-                              padding: '3px 8px',
-                              borderRadius: 6,
-                              fontSize: 11,
-                              fontWeight: 600,
-                              cursor: 'pointer',
-                              transition: 'all 0.15s ease',
-                            }}
-                            onMouseEnter={(e) => (e.currentTarget.style.background = '#dbeafe')}
-                            onMouseLeave={(e) => (e.currentTarget.style.background = '#eff6ff')}
-                          >
-                            Hacer Activa
-                          </button>
-                        )}
-
-                        {/* Botón Generar Diagrama */}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setActiveProposalId(prop.id);
-                            handleGoToDiagram();
-                          }}
-                          title="Generar diagrama de arquitectura en FossFLOW"
-                          style={{
-                            background: '#eff6ff',
-                            border: '1px solid #bfdbfe',
-                            color: '#2563eb',
-                            padding: '3px 8px',
-                            borderRadius: 6,
-                            fontSize: 11,
-                            fontWeight: 600,
+                            border: '1px solid #e2e8f0',
+                            background: '#f8fafc',
+                            color: '#64748b',
                             cursor: 'pointer',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: 4,
                             transition: 'all 0.15s ease',
                           }}
-                          onMouseEnter={(e) => (e.currentTarget.style.background = '#dbeafe')}
-                          onMouseLeave={(e) => (e.currentTarget.style.background = '#eff6ff')}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = '#eff6ff';
+                            e.currentTarget.style.color = '#2563eb';
+                            e.currentTarget.style.borderColor = '#bfdbfe';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = '#f8fafc';
+                            e.currentTarget.style.color = '#64748b';
+                            e.currentTarget.style.borderColor = '#e2e8f0';
+                          }}
                         >
-                          <Network size={12} /> Diagrama
+                          <Pencil size={15} />
                         </button>
 
-                        {/* Botón Descargar diagrama (.json) */}
-                        {(() => {
-                          const propServices = prop.selectedServices || prop.services || [];
-                          const hasServices = propServices.length > 0;
-                          return (
-                            <button
-                              type="button"
-                              disabled={!hasServices}
-                              onClick={() => {
-                                if (hasServices) {
-                                  downloadFossflowDiagram(prop, awsServicesCatalog);
-                                }
-                              }}
-                              title={
-                                hasServices
-                                  ? 'Descargar diagrama (.json)'
-                                  : 'Agrega servicios a tu propuesta para generar el diagrama'
-                              }
-                              style={{
-                                background: hasServices ? '#eff6ff' : '#f8fafc',
-                                border: `1px solid ${hasServices ? '#bfdbfe' : '#e2e8f0'}`,
-                                color: hasServices ? '#2563eb' : '#94a3b8',
-                                padding: '3px 8px',
-                                borderRadius: 6,
-                                fontSize: 11,
-                                fontWeight: 600,
-                                cursor: hasServices ? 'pointer' : 'not-allowed',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: 4,
-                                opacity: hasServices ? 1 : 0.5,
-                                transition: 'all 0.15s ease',
-                              }}
-                              onMouseEnter={(e) => {
-                                if (hasServices) e.currentTarget.style.background = '#dbeafe';
-                              }}
-                              onMouseLeave={(e) => {
-                                if (hasServices) e.currentTarget.style.background = '#eff6ff';
-                              }}
-                            >
-                              <FileJson size={13} /> JSON
-                            </button>
-                          );
-                        })()}
+                        {/* Descargar diagrama (FileJson) */}
+                        <button
+                          type="button"
+                          disabled={!hasServices}
+                          onClick={() => {
+                            if (hasServices) {
+                              downloadFossflowDiagram(prop, awsServicesCatalog);
+                            }
+                          }}
+                          title={
+                            hasServices
+                              ? 'Descargar diagrama (.json)'
+                              : 'Agrega servicios a tu propuesta para generar el diagrama'
+                          }
+                          style={{
+                            width: 32,
+                            height: 32,
+                            minWidth: 32,
+                            minHeight: 32,
+                            padding: 0,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            borderRadius: 6,
+                            border: `1px solid ${hasServices ? '#bfdbfe' : '#e2e8f0'}`,
+                            background: hasServices ? '#eff6ff' : '#f8fafc',
+                            color: hasServices ? '#2563eb' : '#94a3b8',
+                            cursor: hasServices ? 'pointer' : 'not-allowed',
+                            opacity: hasServices ? 1 : 0.5,
+                            transition: 'all 0.15s ease',
+                          }}
+                          onMouseEnter={(e) => {
+                            if (hasServices) {
+                              e.currentTarget.style.background = '#dbeafe';
+                              e.currentTarget.style.color = '#1d4ed8';
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (hasServices) {
+                              e.currentTarget.style.background = '#eff6ff';
+                              e.currentTarget.style.color = '#2563eb';
+                            }
+                          }}
+                        >
+                          <FileJson size={16} />
+                        </button>
 
-                        {/* Trash Icon (Eliminar) */}
+                        {/* Eliminar (Trash2, rojo al pasar el mouse, con confirmación) */}
                         <button
                           type="button"
                           onClick={() => handleDelete(prop.id, prop.solutionName)}
                           title="Eliminar propuesta"
                           style={{
-                            background: 'none',
-                            border: 'none',
-                            cursor: 'pointer',
-                            color: '#64748b',
-                            padding: 4,
+                            width: 32,
+                            height: 32,
+                            minWidth: 32,
+                            minHeight: 32,
+                            padding: 0,
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
                             borderRadius: 6,
-                            transition: 'color 0.15s ease',
+                            border: '1px solid #e2e8f0',
+                            background: '#f8fafc',
+                            color: '#64748b',
+                            cursor: 'pointer',
+                            transition: 'all 0.15s ease',
                           }}
-                          onMouseEnter={(e) => (e.currentTarget.style.color = '#dc2626')}
-                          onMouseLeave={(e) => (e.currentTarget.style.color = '#64748b')}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.borderColor = '#fecaca';
+                            e.currentTarget.style.background = '#fee2e2';
+                            e.currentTarget.style.color = '#dc2626';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.borderColor = '#e2e8f0';
+                            e.currentTarget.style.background = '#f8fafc';
+                            e.currentTarget.style.color = '#64748b';
+                          }}
                         >
-                          <Trash2 size={16} />
+                          <Trash2 size={15} />
                         </button>
                       </div>
                     </div>
@@ -1457,6 +1612,45 @@ export default function AwsPlanning() {
                 </button>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal grande para Ver Análisis de Proyecto */}
+      {selectedAnalysisForModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15, 23, 42, 0.65)',
+            backdropFilter: 'blur(3px)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 20,
+          }}
+          onClick={() => setSelectedAnalysisForModal(null)}
+        >
+          <div
+            style={{
+              maxWidth: 1024,
+              width: '100%',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+              background: '#ffffff',
+              borderRadius: 16,
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35)',
+              position: 'relative',
+              padding: 24,
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <ProjectAnalysisReport
+              analysis={selectedAnalysisForModal}
+              isModal
+              onCloseModal={() => setSelectedAnalysisForModal(null)}
+            />
           </div>
         </div>
       )}

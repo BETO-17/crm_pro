@@ -1,6 +1,6 @@
 import React from 'react';
 
-export type StatusVariant = 'success' | 'warning' | 'danger' | 'neutral';
+export type StatusVariant = 'success' | 'warning' | 'danger' | 'neutral' | 'info';
 
 interface StatusBadgeProps {
   status?: string;
@@ -37,6 +37,12 @@ const VARIANT_MAP: Record<
     bg: '#F1F5F9',
     border: '#E2E8F0',
     dot: '#94A3B8',
+  },
+  info: {
+    color: '#1D4ED8',
+    bg: '#EFF6FF',
+    border: '#BFDBFE',
+    dot: '#2563EB',
   },
 };
 
