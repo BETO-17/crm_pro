@@ -10,6 +10,9 @@ from app.models.user import User, UserWorkspace
 from app.models.workspace import Workspace
 from app.core.security import get_password_hash
 
+from app.api.v1.migration_routes import router as multi_origin_router
+
+
 # Base.metadata.create_all(bind=engine)
 
 def seed_defaults():
@@ -101,6 +104,7 @@ app.include_router(workspaces.router, prefix="/api/v1/workspaces", tags=["worksp
 app.include_router(datasets.router, prefix="/api/v1/datasets", tags=["datasets"])
 app.include_router(analytics.router, prefix="/api/v1/analytics", tags=["analytics"])
 app.include_router(rekognition.router, prefix="/api/v1/rekognition", tags=["rekognition"])
+app.include_router(multi_origin_router, prefix="/api/v1")
 
 @app.get("/")
 def read_root():
