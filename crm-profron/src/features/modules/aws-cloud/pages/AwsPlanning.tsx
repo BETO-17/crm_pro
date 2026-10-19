@@ -84,6 +84,8 @@ export default function AwsPlanning() {
     addService,
     toggleService,
     removeService,
+    addCostItem,
+    clearCostItems,
   } = useAws();
 
   const navigate = useNavigate();
@@ -161,15 +163,66 @@ export default function AwsPlanning() {
     appType: CloudProposal['appType'];
     description: string;
     selectedServices: string[];
+    monthlyBudget?: number;
+    annualBudget?: number;
+    region?: string;
+    scenarioType?: string;
+    servicesCostDetails?: Array<{
+      serviceName: string;
+      codeName: string;
+      category: string;
+      specs: string;
+      monthlyCost: number;
+      quantity: number;
+    }>;
   }) => {
     setCameFromAnalyzer(true);
     setAppType(draft.appType);
     setDescription(draft.description);
 
+    if (draft.region) {
+      setRegion(draft.region);
+    }
+    if (!solutionName.trim()) {
+      setSolutionName(`Migración AWS - ${draft.scenarioType || 'Recomendada'}`);
+    }
+    if (!availabilityLevel) {
+      if (draft.scenarioType?.includes('High') || draft.scenarioType?.includes('Enterprise')) {
+        setAvailabilityLevel('99.99% (Misión Crítica Multi-Región)');
+      } else if (draft.scenarioType?.includes('Cost')) {
+        setAvailabilityLevel('99.9% (Básico Multi-AZ)');
+      } else {
+        setAvailabilityLevel('99.95% (Alta Disponibilidad)');
+      }
+    }
+    if (!migrationGoal) {
+      setMigrationGoal('Modernización de Aplicación');
+    }
+    if (!estimatedUsers) {
+      setEstimatedUsers('5000');
+    }
+
     // Agregar servicios sugeridos a la selección
     for (const svcCode of draft.selectedServices) {
       if (!services.includes(svcCode)) {
         addService(svcCode);
+      }
+    }
+
+    // Sincronizar simulación de costos en AwsContext si hay detalles
+    if (draft.servicesCostDetails && draft.servicesCostDetails.length > 0) {
+      clearCostItems();
+      for (const item of draft.servicesCostDetails) {
+        addCostItem({
+          serviceId: `svc-${item.codeName.toLowerCase()}`,
+          serviceName: item.serviceName,
+          category: (item.category as any) || 'Cómputo',
+          instanceTypeOrTier: item.specs,
+          quantity: item.quantity,
+          hoursPerMonth: 730,
+          monthlyCost: item.monthlyCost,
+          annualCost: item.monthlyCost * 12,
+        });
       }
     }
 
@@ -179,6 +232,8 @@ export default function AwsPlanning() {
       delete copy.description;
       delete copy.appType;
       delete copy.services;
+      delete copy.region;
+      delete copy.solutionName;
       return copy;
     });
 
@@ -188,7 +243,8 @@ export default function AwsPlanning() {
       formCard.scrollIntoView({ behavior: 'smooth' });
     }
 
-    showToast('Revisa la región, usuarios, SLA y objetivo, y registra tu propuesta');
+    const budgetNotice = draft.monthlyBudget ? ` · Presupuesto: $${draft.monthlyBudget.toFixed(2)} USD/mes` : '';
+    showToast(`Escenario ${draft.scenarioType || 'Recomendado'} aplicado${budgetNotice}.`);
   };
 
   const handleApplyTemplate = (tpl: typeof proposalTemplates[0]) => {

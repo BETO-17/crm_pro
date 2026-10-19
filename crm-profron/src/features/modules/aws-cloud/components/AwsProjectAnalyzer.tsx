@@ -1,4 +1,4 @@
-import { useState, useRef, useId } from 'react';
+import { useState, useRef, useId, useEffect } from 'react';
 import {
   FileArchive,
   FolderGit2,
@@ -12,14 +12,27 @@ import {
   Layers,
   ArrowRight,
   Info,
+  Server,
+  Database,
+  Shield,
+  Activity,
+  Globe,
+  DollarSign,
+  Cpu,
+  Zap,
+  Sparkles,
+  Sliders,
+  Download,
+  Key,
 } from 'lucide-react';
 import StatusBadge from './StatusBadge';
-import { analyzerService } from '../services/analyzerService';
+import { analyzerService, checkBackendHealth } from '../services/analyzerService';
 import { awsServicesCatalog } from '../data/awsServicesData';
 import type {
   AnalyzerInput,
   AnalysisResult,
   CloudProposal,
+  ArchitectureScenario,
 } from '../types/awsTypes';
 
 interface AwsProjectAnalyzerProps {
@@ -27,30 +40,71 @@ interface AwsProjectAnalyzerProps {
     appType: CloudProposal['appType'];
     description: string;
     selectedServices: string[];
+    monthlyBudget?: number;
+    annualBudget?: number;
+    region?: string;
+    scenarioType?: string;
+    servicesCostDetails?: Array<{
+      serviceName: string;
+      codeName: string;
+      category: string;
+      specs: string;
+      monthlyCost: number;
+      quantity: number;
+    }>;
   }) => void;
 }
 
 type TabType = 'zip' | 'github' | 'document';
 
-// Ejemplos de repositorios públicos reales para pruebas rápidas
 const GITHUB_EXAMPLES = [
   {
-    label: 'React + Node (Redux Essentials)',
+    label: 'FastAPI + PostgreSQL (Microservicio)',
+    url: 'https://github.com/tiangolo/fastapi',
+  },
+  {
+    label: 'React + Node (Fullstack)',
     url: 'https://github.com/reduxjs/redux-essentials-counter-example',
   },
   {
-    label: 'Django (Simple Signup)',
+    label: 'Django (Auth & Postgres)',
     url: 'https://github.com/sibtc/simple-django-signup',
   },
-  {
-    label: 'FastAPI (Microservicio)',
-    url: 'https://github.com/tiangolo/fastapi',
-  },
+];
+
+const REGION_OPTIONS = [
+  { code: 'us-east-1', name: 'EE.UU. Este (N. Virginia)' },
+  { code: 'us-west-2', name: 'EE.UU. Oeste (Oregón)' },
+  { code: 'sa-east-1', name: 'América del Sur (São Paulo)' },
+  { code: 'eu-west-1', name: 'Europa (Irlanda)' },
+];
+
+const TRAFFIC_TIERS = [
+  { id: 'low', label: 'Bajo', desc: '<25k req/mes (MVP / Dev)' },
+  { id: 'medium', label: 'Medio', desc: '100k - 500k req/mes (Producción PyME)' },
+  { id: 'high', label: 'Alto', desc: '>1M req/mes (Corporativo)' },
+  { id: 'enterprise', label: 'Misión Crítica', desc: 'Multi-zona / Cero tolerancia a fallos' },
 ];
 
 export default function AwsProjectAnalyzer({ onApplyToProposal }: AwsProjectAnalyzerProps) {
   const fileInputId = useId();
   const [activeTab, setActiveTab] = useState<TabType>('zip');
+
+  // Estado del backend de evaluación
+  const [backendHealth, setBackendHealth] = useState<{
+    online: boolean;
+    service?: string;
+    aiEngine?: string;
+    geminiActive?: boolean;
+    port?: string;
+  }>({ online: false });
+
+  // Parámetros de negocio / configuración
+  const [trafficTier, setTrafficTier] = useState<string>('medium');
+  const [targetRegion, setTargetRegion] = useState<string>('us-east-1');
+  const [customNotes, setCustomNotes] = useState<string>('');
+  const [githubToken, setGithubToken] = useState<string>('');
+  const [showAdvanced, setShowAdvanced] = useState<boolean>(false);
 
   // Estado para entrada ZIP
   const [zipFile, setZipFile] = useState<File | null>(null);
@@ -69,11 +123,59 @@ export default function AwsProjectAnalyzer({ onApplyToProposal }: AwsProjectAnal
   const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
 
-  // Checkboxes de servicios recomendados seleccionados
+  // Escenario de arquitectura actualmente seleccionado
+  const [selectedScenarioIndex, setSelectedScenarioIndex] = useState<number>(1); // 1 = Recommended-Production
+
+  // Checkboxes de servicios seleccionados del escenario activo
   const [selectedServiceCodes, setSelectedServiceCodes] = useState<Set<string>>(new Set());
 
   // Control de cancelación
   const cancelRequestedRef = useRef(false);
+
+  // Verificar salud del backend al montar
+  useEffect(() => {
+    checkBackendHealth().then((health) => {
+      setBackendHealth(health);
+    });
+  }, []);
+
+  // Sincronizar servicios recomendados cuando cambia el resultado o el escenario
+  useEffect(() => {
+    if (!analysisResult) return;
+
+    const evalData = analysisResult.enterpriseEvaluation;
+    if (evalData && evalData.scenarios && evalData.scenarios.length > 0) {
+      const activeScenario = evalData.scenarios[selectedScenarioIndex] || evalData.scenarios[0];
+      const initialCodes = new Set<string>();
+
+      for (const svc of activeScenario.services) {
+        const code = svc.service_code || svc.service_name;
+        const matched = awsServicesCatalog.find(
+          (cat) =>
+            cat.codeName.toLowerCase() === code.toLowerCase() ||
+            cat.shortName.toLowerCase() === code.toLowerCase() ||
+            cat.name.toLowerCase().includes(svc.service_name.toLowerCase()) ||
+            svc.service_name.toLowerCase().includes(cat.shortName.toLowerCase())
+        );
+        if (matched) {
+          initialCodes.add(matched.codeName);
+        } else {
+          initialCodes.add(svc.service_code || svc.service_name.split(' ')[0]);
+        }
+      }
+      setSelectedServiceCodes(initialCodes);
+    } else {
+      // Fallback a recomendaciones estándar
+      const initialCodes = new Set<string>();
+      for (const rec of analysisResult.recommendations) {
+        const catSvc = awsServicesCatalog.find((s) => s.id === rec.serviceId);
+        if (catSvc) {
+          initialCodes.add(catSvc.codeName);
+        }
+      }
+      setSelectedServiceCodes(initialCodes);
+    }
+  }, [analysisResult, selectedScenarioIndex]);
 
   // Manejo de drag & drop para ZIP
   const handleDragOver = (e: React.DragEvent) => {
@@ -95,8 +197,8 @@ export default function AwsProjectAnalyzer({ onApplyToProposal }: AwsProjectAnal
         setAnalysisError('Formato no válido. Solo se admiten archivos con extensión .zip.');
         return;
       }
-      if (file.size > 20 * 1024 * 1024) {
-        setAnalysisError('El archivo ZIP excede el tamaño máximo permitido de 20 MB.');
+      if (file.size > 50 * 1024 * 1024) {
+        setAnalysisError('El archivo ZIP excede el tamaño máximo permitido de 50 MB.');
         return;
       }
       setZipFile(file);
@@ -112,14 +214,14 @@ export default function AwsProjectAnalyzer({ onApplyToProposal }: AwsProjectAnal
           setAnalysisError('Formato no válido. Solo se admiten archivos .zip.');
           return;
         }
-        if (file.size > 20 * 1024 * 1024) {
-          setAnalysisError('El archivo ZIP excede el tamaño máximo de 20 MB.');
+        if (file.size > 50 * 1024 * 1024) {
+          setAnalysisError('El archivo ZIP excede el tamaño máximo de 50 MB.');
           return;
         }
         setZipFile(file);
       } else if (activeTab === 'document') {
-        if (file.size > 1 * 1024 * 1024) {
-          setAnalysisError('El documento supera el tamaño máximo permitido de 1 MB.');
+        if (file.size > 2 * 1024 * 1024) {
+          setAnalysisError('El documento supera el tamaño máximo permitido de 2 MB.');
           return;
         }
         setDocFile(file);
@@ -136,7 +238,7 @@ export default function AwsProjectAnalyzer({ onApplyToProposal }: AwsProjectAnal
     return false;
   };
 
-  // Ejecución del análisis con etapas pausadas para lectura visual
+  // Ejecución del análisis conectando al servicio cloud
   const handleStartAnalysis = async () => {
     setAnalysisError(null);
     setAnalysisResult(null);
@@ -144,10 +246,7 @@ export default function AwsProjectAnalyzer({ onApplyToProposal }: AwsProjectAnal
     setIsAnalyzing(true);
 
     try {
-      // 1. Etapa: Lectura de archivos
-      setAnalysisStep('Leyendo archivos del proyecto…');
-      await new Promise((resolve) => setTimeout(resolve, 450));
-      if (cancelRequestedRef.current) return;
+      setAnalysisStep('Iniciando auditoría técnica del proyecto...');
 
       let input: AnalyzerInput;
       if (activeTab === 'zip') {
@@ -168,35 +267,41 @@ export default function AwsProjectAnalyzer({ onApplyToProposal }: AwsProjectAnal
             file: { name: 'especificacion.txt', text: docText.trim() },
           };
         } else {
-          throw new Error('Adjunta un archivo .md/.txt o escribe la descripción técnica.');
+          throw new Error('Adjunta un archivo o escribe la especificación técnica.');
         }
       }
 
-      // 2. Etapa: Detección de tecnologías
-      setAnalysisStep('Detectando tecnologías y patrones arquitectónicos…');
-      await new Promise((resolve) => setTimeout(resolve, 450));
+      setAnalysisStep('Detectando artefactos PaaS (Render, Vercel, Docker) y dependencias...');
+      await new Promise((r) => setTimeout(r, 400));
       if (cancelRequestedRef.current) return;
 
-      // 3. Etapa: Generando recomendaciones
-      setAnalysisStep('Generando recomendaciones de servicios AWS…');
-      const result = await analyzerService.analyze(input);
-      await new Promise((resolve) => setTimeout(resolve, 450));
+      setAnalysisStep('Consultando al motor de arquitectura Cloud (Gemini + REA Agent)...');
+
+      const result = await analyzerService.analyze(input, {
+        traffic_tier: trafficTier as any,
+        target_region: targetRegion,
+        custom_notes: customNotes,
+        github_token: githubToken || undefined,
+      });
+
+      if (cancelRequestedRef.current) return;
+
+      setAnalysisStep('Calculando escenarios de dimensionamiento y presupuesto...');
+      await new Promise((r) => setTimeout(r, 300));
       if (cancelRequestedRef.current) return;
 
       setAnalysisResult(result);
 
-      // Preseleccionar todos los servicios recomendados
-      const initialCodes = new Set<string>();
-      for (const rec of result.recommendations) {
-        const catSvc = awsServicesCatalog.find((s) => s.id === rec.serviceId);
-        if (catSvc) {
-          initialCodes.add(catSvc.codeName);
-        }
+      // Si hay escenarios enterprise, seleccionar Recommended-Production (index 1) si existe
+      if (result.enterpriseEvaluation?.scenarios) {
+        const recIndex = result.enterpriseEvaluation.scenarios.findIndex(
+          (s) => s.scenario_type === 'Recommended-Production'
+        );
+        setSelectedScenarioIndex(recIndex >= 0 ? recIndex : 0);
       }
-      setSelectedServiceCodes(initialCodes);
     } catch (err: unknown) {
       if (!cancelRequestedRef.current) {
-        setAnalysisError(err instanceof Error ? err.message : 'Error desconocido durante el análisis.');
+        setAnalysisError(err instanceof Error ? err.message : 'Error inesperado durante el análisis.');
       }
     } finally {
       setIsAnalyzing(false);
@@ -234,16 +339,49 @@ export default function AwsProjectAnalyzer({ onApplyToProposal }: AwsProjectAnal
   const handleApply = () => {
     if (!analysisResult) return;
 
-    // Mapear appType permitido
+    const evalData = analysisResult.enterpriseEvaluation;
+    const currentScenario: ArchitectureScenario | undefined =
+      evalData?.scenarios?.[selectedScenarioIndex];
+
     const validAppType: CloudProposal['appType'] =
-      analysisResult.suggestedAppType as CloudProposal['appType'] || 'Portal Web Empresarial';
+      (analysisResult.suggestedAppType as CloudProposal['appType']) || 'Portal Web Empresarial';
+
+    const serviceCostDetails = currentScenario?.services.map((s) => ({
+      serviceName: s.service_name,
+      codeName: s.service_code || s.service_name,
+      category: s.category,
+      specs: s.specs,
+      monthlyCost: s.total_monthly_usd,
+      quantity: s.quantity,
+    }));
 
     onApplyToProposal({
       appType: validAppType,
-      description: analysisResult.suggestedDescription,
+      description: currentScenario
+        ? `${evalData?.system_analysis || analysisResult.suggestedDescription}\n\nEscenario Aplicado: ${currentScenario.scenario_type} - ${currentScenario.summary}\nEstrategia: ${evalData?.migration_strategy || 'Replatform'}`
+        : analysisResult.suggestedDescription,
       selectedServices: Array.from(selectedServiceCodes),
+      monthlyBudget: currentScenario?.pricing.monthly_total_usd,
+      annualBudget: currentScenario?.pricing.annual_total_usd,
+      region: targetRegion,
+      scenarioType: currentScenario?.scenario_type,
+      servicesCostDetails: serviceCostDetails,
     });
   };
+
+  const handleDownloadReport = () => {
+    if (!analysisResult) return;
+    const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(analysisResult, null, 2));
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute('href', dataStr);
+    downloadAnchor.setAttribute('download', 'evaluacion_migracion_aws.json');
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+  };
+
+  const activeScenario: ArchitectureScenario | undefined =
+    analysisResult?.enterpriseEvaluation?.scenarios?.[selectedScenarioIndex];
 
   return (
     <div
@@ -252,13 +390,168 @@ export default function AwsProjectAnalyzer({ onApplyToProposal }: AwsProjectAnal
         border: '1px solid #e2e8f0',
         borderRadius: 16,
         padding: 24,
-        boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
+        boxShadow: '0 4px 16px rgba(15, 23, 42, 0.04)',
         display: 'flex',
         flexDirection: 'column',
         gap: 20,
       }}
     >
-      {/* Pestañas de Fuente de Entrada */}
+      {/* Barra de Estado del Backend y Servicios */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div
+            style={{
+              width: 9,
+              height: 9,
+              borderRadius: '50%',
+              background: backendHealth.online ? '#10b981' : '#f59e0b',
+              boxShadow: backendHealth.online ? '0 0 8px #10b981' : 'none',
+            }}
+          />
+          <span style={{ fontSize: 12.5, fontWeight: 700, color: '#1e293b' }}>
+            {backendHealth.online
+              ? `Servicio Cloud AI Conectado (Puerto ${backendHealth.port || '8080'} · ${backendHealth.aiEngine || 'Gemini + REA Agent'})`
+              : 'Conectando con Backend Cloud (puerto 8080)...'}
+          </span>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setShowAdvanced((v) => !v)}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            background: showAdvanced ? '#eff6ff' : '#f8fafc',
+            border: '1px solid #cbd5e1',
+            borderRadius: 8,
+            padding: '5px 12px',
+            fontSize: 12,
+            fontWeight: 600,
+            color: showAdvanced ? '#2563eb' : '#475569',
+            cursor: 'pointer',
+          }}
+        >
+          <Sliders size={13} />
+          Parámetros de Evaluación ({targetRegion}, {trafficTier})
+        </button>
+      </div>
+
+      {/* Panel Expandible de Parámetros de Migración */}
+      {showAdvanced && (
+        <div
+          style={{
+            background: '#f8fafc',
+            border: '1px solid #e2e8f0',
+            borderRadius: 12,
+            padding: 16,
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+            gap: 14,
+          }}
+        >
+          {/* Región Destino */}
+          <div>
+            <label style={{ display: 'block', fontSize: 11.5, fontWeight: 700, color: '#475569', marginBottom: 4 }}>
+              Región de Destino AWS
+            </label>
+            <select
+              value={targetRegion}
+              onChange={(e) => setTargetRegion(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '7px 10px',
+                borderRadius: 8,
+                border: '1px solid #cbd5e1',
+                fontSize: 12,
+                background: '#ffffff',
+                color: '#1e293b',
+              }}
+            >
+              {REGION_OPTIONS.map((r) => (
+                <option key={r.code} value={r.code}>
+                  {r.name} ({r.code})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Perfil de Tráfico */}
+          <div>
+            <label style={{ display: 'block', fontSize: 11.5, fontWeight: 700, color: '#475569', marginBottom: 4 }}>
+              Perfil de Tráfico Esperado
+            </label>
+            <select
+              value={trafficTier}
+              onChange={(e) => setTrafficTier(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '7px 10px',
+                borderRadius: 8,
+                border: '1px solid #cbd5e1',
+                fontSize: 12,
+                background: '#ffffff',
+                color: '#1e293b',
+              }}
+            >
+              {TRAFFIC_TIERS.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.label} — {t.desc}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Token de GitHub Opcional */}
+          {activeTab === 'github' && (
+            <div>
+              <label style={{ display: 'block', fontSize: 11.5, fontWeight: 700, color: '#475569', marginBottom: 4 }}>
+                GitHub Token (Repos Privados)
+              </label>
+              <div style={{ position: 'relative' }}>
+                <Key size={13} style={{ position: 'absolute', left: 10, top: 10, color: '#94a3b8' }} />
+                <input
+                  type="password"
+                  value={githubToken}
+                  onChange={(e) => setGithubToken(e.target.value)}
+                  placeholder="ghp_xxxx (opcional)"
+                  style={{
+                    width: '100%',
+                    padding: '7px 10px 7px 28px',
+                    borderRadius: 8,
+                    border: '1px solid #cbd5e1',
+                    fontSize: 12,
+                    background: '#ffffff',
+                  }}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Notas y requerimientos específicos */}
+          <div style={{ gridColumn: '1 / -1' }}>
+            <label style={{ display: 'block', fontSize: 11.5, fontWeight: 700, color: '#475569', marginBottom: 4 }}>
+              Requerimientos y Notas de Arquitectura (Opcional)
+            </label>
+            <input
+              type="text"
+              value={customNotes}
+              onChange={(e) => setCustomNotes(e.target.value)}
+              placeholder="Ej. Cumplir PCI-DSS, alta concurrencia en facturación, mantener PostgreSQL..."
+              style={{
+                width: '100%',
+                padding: '7px 10px',
+                borderRadius: 8,
+                border: '1px solid #cbd5e1',
+                fontSize: 12,
+                background: '#ffffff',
+              }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Pestañas de Selección de Fuente */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
         <div
           style={{
@@ -269,7 +562,6 @@ export default function AwsProjectAnalyzer({ onApplyToProposal }: AwsProjectAnal
             border: '1px solid #e2e8f0',
             gap: 4,
             overflowX: 'auto',
-            maxWidth: '100%',
           }}
         >
           <button
@@ -291,7 +583,6 @@ export default function AwsProjectAnalyzer({ onApplyToProposal }: AwsProjectAnal
               background: activeTab === 'zip' ? '#2563eb' : 'transparent',
               color: activeTab === 'zip' ? '#ffffff' : '#64748b',
               transition: 'all 0.15s ease',
-              whiteSpace: 'nowrap',
             }}
           >
             <FileArchive size={16} />
@@ -316,7 +607,6 @@ export default function AwsProjectAnalyzer({ onApplyToProposal }: AwsProjectAnal
               background: activeTab === 'github' ? '#2563eb' : 'transparent',
               color: activeTab === 'github' ? '#ffffff' : '#64748b',
               transition: 'all 0.15s ease',
-              whiteSpace: 'nowrap',
             }}
           >
             <FolderGit2 size={16} />
@@ -341,7 +631,6 @@ export default function AwsProjectAnalyzer({ onApplyToProposal }: AwsProjectAnal
               background: activeTab === 'document' ? '#2563eb' : 'transparent',
               color: activeTab === 'document' ? '#ffffff' : '#64748b',
               transition: 'all 0.15s ease',
-              whiteSpace: 'nowrap',
             }}
           >
             <FileText size={16} />
@@ -350,8 +639,8 @@ export default function AwsProjectAnalyzer({ onApplyToProposal }: AwsProjectAnal
         </div>
 
         <span style={{ fontSize: 12, color: '#64748b', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-          <Info size={14} color="#2563eb" />
-          Tu proyecto se analiza en tu navegador y no se sube a ningún servidor.
+          <Sparkles size={14} color="#2563eb" />
+          Auditoría automatizada con 3 escenarios de costos y Well-Architected Framework
         </span>
       </div>
 
@@ -366,7 +655,7 @@ export default function AwsProjectAnalyzer({ onApplyToProposal }: AwsProjectAnal
             border: isDragging ? '2px dashed #2563eb' : '2px dashed #cbd5e1',
             background: isDragging ? '#eff6ff' : '#f8fafc',
             borderRadius: 14,
-            padding: '36px 20px',
+            padding: '32px 20px',
             textAlign: 'center',
             cursor: 'pointer',
             transition: 'all 0.2s ease',
@@ -392,192 +681,151 @@ export default function AwsProjectAnalyzer({ onApplyToProposal }: AwsProjectAnal
               width: 52,
               height: 52,
               borderRadius: '50%',
-              background: '#e0e7ff',
-              color: '#2563eb',
+              background: zipFile ? '#dcfce7' : '#eff6ff',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
+              color: zipFile ? '#16a34a' : '#2563eb',
             }}
           >
-            <UploadCloud size={26} />
+            {zipFile ? <CheckCircle2 size={26} /> : <UploadCloud size={26} />}
           </div>
-          <div>
-            {zipFile ? (
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#ffffff', padding: '6px 14px', borderRadius: 20, border: '1px solid #cbd5e1' }}>
-                <CheckCircle2 size={16} color="#16a34a" />
-                <strong style={{ fontSize: 13, color: '#1e293b' }}>{zipFile.name}</strong>
-                <span style={{ fontSize: 12, color: '#64748b' }}>({(zipFile.size / 1024 / 1024).toFixed(2)} MB)</span>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setZipFile(null);
-                  }}
-                  style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#94a3b8', padding: 2 }}
-                >
-                  <X size={14} />
-                </button>
-              </div>
-            ) : (
-              <>
-                <p style={{ fontSize: 14, fontWeight: 600, color: '#1e293b', margin: '0 0 4px' }}>
-                  Arrastra tu archivo ZIP aquí o haz clic para seleccionar
-                </p>
-                <p style={{ fontSize: 12, color: '#64748b', margin: 0 }}>
-                  Máximo 20 MB. Lee únicamente package.json, requirements.txt, Dockerfile, etc.
-                </p>
-              </>
-            )}
-          </div>
+          {zipFile ? (
+            <div>
+              <p style={{ margin: 0, fontWeight: 700, fontSize: 14, color: '#0f172a' }}>{zipFile.name}</p>
+              <p style={{ margin: '4px 0 0', fontSize: 12, color: '#64748b' }}>
+                {(zipFile.size / (1024 * 1024)).toFixed(2)} MB — Archivo preparado para evaluar
+              </p>
+            </div>
+          ) : (
+            <div>
+              <p style={{ margin: 0, fontWeight: 700, fontSize: 14, color: '#0f172a' }}>
+                Arrastra tu archivo .zip aquí o haz clic para examinar
+              </p>
+              <p style={{ margin: '4px 0 0', fontSize: 12, color: '#64748b' }}>
+                Soporta proyectos Render, Vercel, Node, Python, Django, Docker o microservicios (máx. 50 MB)
+              </p>
+            </div>
+          )}
         </div>
       )}
 
       {/* 2. GITHUB */}
       {activeTab === 'github' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <div>
-            <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#1e293b', marginBottom: 6 }}>
-              URL del repositorio público de GitHub
-            </label>
-            <div style={{ position: 'relative' }}>
-              <input
-                type="text"
-                placeholder="https://github.com/usuario/repositorio"
-                value={githubUrl}
-                onChange={(e) => {
-                  setGithubUrl(e.target.value);
-                  setAnalysisError(null);
-                }}
-                style={{
-                  width: '100%',
-                  padding: '10px 14px',
-                  borderRadius: 10,
-                  border: '1px solid #cbd5e1',
-                  fontSize: 13.5,
-                  outline: 'none',
-                }}
-              />
-            </div>
-            <span style={{ fontSize: 12, color: '#64748b', marginTop: 4, display: 'block' }}>
-              Solo repositorios públicos. Se inspeccionan los archivos de manifiesto mediante la API de GitHub.
-            </span>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input
+              type="text"
+              value={githubUrl}
+              onChange={(e) => setGithubUrl(e.target.value)}
+              placeholder="https://github.com/usuario/repositorio"
+              style={{
+                flex: 1,
+                padding: '10px 14px',
+                borderRadius: 10,
+                border: '1px solid #cbd5e1',
+                fontSize: 13,
+                outline: 'none',
+              }}
+            />
           </div>
-
-          {/* Chips de ejemplos reales */}
-          <div>
-            <span style={{ fontSize: 12, fontWeight: 600, color: '#475569', marginRight: 8 }}>
-              Probar con un ejemplo:
-            </span>
-            <div style={{ display: 'inline-flex', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
-              {GITHUB_EXAMPLES.map((ex) => (
-                <button
-                  key={ex.label}
-                  type="button"
-                  onClick={() => {
-                    setGithubUrl(ex.url);
-                    setAnalysisError(null);
-                  }}
-                  style={{
-                    padding: '4px 10px',
-                    borderRadius: 16,
-                    fontSize: 11.5,
-                    fontWeight: 500,
-                    border: '1px solid #e2e8f0',
-                    background: '#f8fafc',
-                    color: '#2563eb',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                  }}
-                >
-                  {ex.label}
-                </button>
-              ))}
-            </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 11.5, color: '#64748b', fontWeight: 600 }}>Probar con ejemplos:</span>
+            {GITHUB_EXAMPLES.map((ex) => (
+              <button
+                key={ex.label}
+                type="button"
+                onClick={() => setGithubUrl(ex.url)}
+                style={{
+                  background: '#f1f5f9',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: 6,
+                  padding: '4px 10px',
+                  fontSize: 11.5,
+                  color: '#2563eb',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                {ex.label}
+              </button>
+            ))}
           </div>
         </div>
       )}
 
       {/* 3. DOCUMENTO */}
       {activeTab === 'document' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-            <label
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 8,
-                padding: '8px 14px',
-                borderRadius: 8,
-                border: '1px solid #cbd5e1',
-                background: '#f8fafc',
-                fontSize: 13,
-                fontWeight: 600,
-                color: '#1e293b',
-                cursor: 'pointer',
-              }}
-            >
-              <UploadCloud size={16} />
-              {docFile ? docFile.name : 'Subir archivo .md o .txt (máx 1 MB)'}
-              <input
-                type="file"
-                accept=".md,.txt"
-                style={{ display: 'none' }}
-                onChange={handleFileInputChange}
-              />
-            </label>
-            {docFile && (
-              <button
-                type="button"
-                onClick={() => setDocFile(null)}
-                style={{ border: 'none', background: 'transparent', color: '#dc2626', fontSize: 12, cursor: 'pointer' }}
-              >
-                Quitar archivo
-              </button>
-            )}
-            <span style={{ fontSize: 12, color: '#64748b' }}>o pega el contenido técnico debajo:</span>
-          </div>
-
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <textarea
-            rows={5}
-            placeholder="Pega aquí la descripción técnica o dependencias de tu proyecto (ej. 'Backend en Django con base de datos PostgreSQL, React en frontend y cola de tareas Redis')..."
             value={docText}
-            onChange={(e) => {
-              setDocText(e.target.value);
-              setAnalysisError(null);
-            }}
+            onChange={(e) => setDocText(e.target.value)}
+            rows={4}
+            placeholder="Pega aquí la arquitectura del sistema, dependencias (package.json, requirements.txt, render.yaml) o requerimientos..."
             style={{
               width: '100%',
               padding: 12,
               borderRadius: 10,
               border: '1px solid #cbd5e1',
-              fontSize: 13,
-              fontFamily: 'inherit',
+              fontSize: 12.5,
+              fontFamily: 'monospace',
               outline: 'none',
+              resize: 'vertical',
             }}
           />
         </div>
       )}
 
-      {/* BARRA DE ACCIÓN / BOTÓN DE ANÁLISIS */}
+      {/* MENSAJE DE ERROR */}
+      {analysisError && (
+        <div
+          style={{
+            background: '#fef2f2',
+            border: '1px solid #fecaca',
+            color: '#b91c1c',
+            borderRadius: 10,
+            padding: '10px 14px',
+            fontSize: 12.5,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 10,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <AlertCircle size={16} />
+            <span>{analysisError}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setAnalysisError(null)}
+            style={{ background: 'transparent', border: 'none', color: '#b91c1c', cursor: 'pointer' }}
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
+      {/* BOTÓN PRINCIPAL DE INICIO / PROGRESO */}
       {!analysisResult && (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 12, marginTop: 4 }}>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
           {isAnalyzing ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <span style={{ fontSize: 13, color: '#2563eb', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                <Loader2 size={16} className="animate-spin" />
-                {analysisStep}
-              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#2563eb', fontWeight: 600 }}>
+                <Loader2 size={18} className="animate-spin" />
+                <span>{analysisStep}</span>
+              </div>
               <button
                 type="button"
                 onClick={handleCancel}
                 style={{
-                  padding: '8px 16px',
-                  borderRadius: 8,
-                  fontSize: 13,
-                  fontWeight: 600,
+                  background: '#f1f5f9',
                   border: '1px solid #cbd5e1',
-                  background: '#ffffff',
+                  borderRadius: 8,
+                  padding: '8px 14px',
+                  fontSize: 12,
                   color: '#64748b',
+                  fontWeight: 600,
                   cursor: 'pointer',
                 }}
               >
@@ -593,260 +841,390 @@ export default function AwsProjectAnalyzer({ onApplyToProposal }: AwsProjectAnal
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: 8,
-                padding: '10px 20px',
-                borderRadius: 10,
-                fontSize: 13.5,
-                fontWeight: 600,
-                border: 'none',
-                cursor: isInputReady() ? 'pointer' : 'not-allowed',
                 background: isInputReady() ? '#2563eb' : '#94a3b8',
                 color: '#ffffff',
-                boxShadow: isInputReady() ? '0 2px 6px rgba(37,99,235,0.25)' : 'none',
+                border: 'none',
+                borderRadius: 10,
+                padding: '10px 22px',
+                fontSize: 13.5,
+                fontWeight: 700,
+                cursor: isInputReady() ? 'pointer' : 'not-allowed',
+                boxShadow: isInputReady() ? '0 4px 12px rgba(37, 99, 235, 0.25)' : 'none',
                 transition: 'all 0.15s ease',
               }}
             >
-              <Layers size={16} />
-              Analizar proyecto
+              <Sparkles size={16} />
+              Evaluar y Dimensionar en AWS
             </button>
           )}
         </div>
       )}
 
-      {/* MENSAJE DE ERROR */}
-      {analysisError && (
-        <div
-          style={{
-            background: '#fef2f2',
-            border: '1px solid #fecaca',
-            borderRadius: 12,
-            padding: '14px 18px',
-            display: 'flex',
-            alignItems: 'flex-start',
-            justifyContent: 'space-between',
-            gap: 12,
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-            <AlertCircle size={18} color="#dc2626" style={{ flexShrink: 0, marginTop: 2 }} />
-            <div>
-              <p style={{ fontSize: 13, fontWeight: 600, color: '#991b1b', margin: '0 0 2px' }}>
-                Error en el análisis
-              </p>
-              <p style={{ fontSize: 12.5, color: '#b91c1c', margin: 0 }}>{analysisError}</p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => handleStartAnalysis()}
+      {/* ========================================================================= */}
+      {/* RESULTADOS DE LA EVALUACIÓN EMPRESARIAL */}
+      {/* ========================================================================= */}
+      {analysisResult && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20, marginTop: 8 }}>
+          {/* Cabecera Ejecutiva del Diagnóstico */}
+          <div
             style={{
-              padding: '6px 12px',
-              borderRadius: 6,
-              fontSize: 12,
-              fontWeight: 600,
-              border: '1px solid #fca5a5',
-              background: '#ffffff',
-              color: '#991b1b',
-              cursor: 'pointer',
-              whiteSpace: 'nowrap',
+              background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+              color: '#ffffff',
+              borderRadius: 14,
+              padding: 20,
+              boxShadow: '0 4px 14px rgba(0,0,0,0.1)',
             }}
           >
-            Intentar de nuevo
-          </button>
-        </div>
-      )}
-
-      {/* =========================================================================
-       * RESULTADO DEL ANÁLISIS (BORRADOR REVISABLE)
-       * ========================================================================= */}
-      {analysisResult && (
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 18,
-            paddingTop: 16,
-            borderTop: '1px solid #f1f5f9',
-          }}
-        >
-          {/* 1. Encabezado de Resumen */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 14, fontWeight: 700, color: '#1e293b' }}>
-                {analysisResult.source}
-              </span>
-              <span style={{ fontSize: 12.5, color: '#64748b' }}>
-                • {analysisResult.filesAnalyzed} archivo{analysisResult.filesAnalyzed === 1 ? '' : 's'} analizado{analysisResult.filesAnalyzed === 1 ? '' : 's'}
-              </span>
-            </div>
-            <StatusBadge variant="neutral">Análisis por reglas</StatusBadge>
-          </div>
-
-          {/* 2. Qué detectamos */}
-          <div>
-            <h4 style={{ fontSize: 13, fontWeight: 700, color: '#334155', margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              Qué detectamos
-            </h4>
-            {analysisResult.detected.length === 0 ? (
-              <p style={{ fontSize: 13, color: '#64748b', margin: 0, fontStyle: 'italic' }}>
-                No encontramos archivos de configuración reconocibles.
-              </p>
-            ) : (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                {analysisResult.detected.map((tech) => (
-                  <div
-                    key={tech.id}
-                    title={`Evidencia: ${tech.evidence.match} en ${tech.evidence.file}`}
-                    style={{
-                      display: 'inline-flex',
-                      flexDirection: 'column',
-                      background: '#f8fafc',
-                      border: '1px solid #e2e8f0',
-                      borderRadius: 10,
-                      padding: '6px 12px',
-                    }}
-                  >
-                    <span style={{ fontSize: 12.5, fontWeight: 700, color: '#1e293b' }}>
-                      {tech.name}
-                    </span>
-                    <span style={{ fontSize: 10.5, color: '#64748b' }}>
-                      {tech.evidence.file}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* 3. Servicios recomendados con Checkbox */}
-          {analysisResult.recommendations.length > 0 && (
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                <h4 style={{ fontSize: 13, fontWeight: 700, color: '#334155', margin: 0, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                  Servicios AWS recomendados
-                </h4>
-                <span style={{ fontSize: 12, color: '#64748b' }}>
-                  {selectedServiceCodes.size} de {analysisResult.recommendations.length} seleccionados
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10, marginBottom: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                <span
+                  style={{
+                    background: '#2563eb',
+                    color: '#ffffff',
+                    fontSize: 11,
+                    fontWeight: 700,
+                    padding: '3px 10px',
+                    borderRadius: 20,
+                  }}
+                >
+                  Plataforma previa: {analysisResult.enterpriseEvaluation?.origin_detected || 'Detectada'}
+                </span>
+                <span
+                  style={{
+                    background: 'rgba(255,255,255,0.12)',
+                    color: '#93c5fd',
+                    fontSize: 11,
+                    fontWeight: 600,
+                    padding: '3px 10px',
+                    borderRadius: 20,
+                  }}
+                >
+                  Estrategia: {analysisResult.enterpriseEvaluation?.migration_strategy || 'Replatform'}
+                </span>
+                <span
+                  style={{
+                    background: 'rgba(16, 185, 129, 0.2)',
+                    color: '#34d399',
+                    fontSize: 11,
+                    fontWeight: 600,
+                    padding: '3px 10px',
+                    borderRadius: 20,
+                  }}
+                >
+                  {analysisResult.enterpriseEvaluation?.architecture_pattern || 'Microservicios'}
                 </span>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {analysisResult.recommendations.map((rec) => {
-                  const catalogSvc = awsServicesCatalog.find((s) => s.id === rec.serviceId);
-                  if (!catalogSvc) return null;
-                  const isChecked = selectedServiceCodes.has(catalogSvc.codeName);
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <button
+                  type="button"
+                  onClick={handleDownloadReport}
+                  style={{
+                    background: 'rgba(255,255,255,0.1)',
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    borderRadius: 8,
+                    padding: '4px 10px',
+                    color: '#ffffff',
+                    fontSize: 11.5,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 4,
+                  }}
+                >
+                  <Download size={13} /> JSON
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDiscard}
+                  style={{
+                    background: 'rgba(255,255,255,0.1)',
+                    border: 'none',
+                    borderRadius: 8,
+                    padding: '4px 10px',
+                    color: '#cbd5e1',
+                    fontSize: 11.5,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Reevaluar
+                </button>
+              </div>
+            </div>
+
+            <p style={{ margin: 0, fontSize: 13, color: '#e2e8f0', lineHeight: 1.5 }}>
+              {analysisResult.enterpriseEvaluation?.system_analysis || analysisResult.suggestedDescription}
+            </p>
+          </div>
+
+          {/* SELECTOR DE LOS 3 ESCENARIOS DE PRESUPUESTO */}
+          {analysisResult.enterpriseEvaluation?.scenarios && analysisResult.enterpriseEvaluation.scenarios.length > 0 && (
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                <div>
+                  <h4 style={{ margin: 0, fontSize: 15, fontWeight: 800, color: '#0f172a' }}>
+                    Escenarios y Presupuestos Cloud en AWS
+                  </h4>
+                  <p style={{ margin: '2px 0 0', fontSize: 12, color: '#64748b' }}>
+                    Compara opciones según SLA, tolerancia a fallos y presupuesto mensual.
+                  </p>
+                </div>
+              </div>
+
+              {/* Grid de Pestañas de Escenarios */}
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+                  gap: 12,
+                  marginBottom: 16,
+                }}
+              >
+                {analysisResult.enterpriseEvaluation.scenarios.map((sc, idx) => {
+                  const isSelected = selectedScenarioIndex === idx;
+                  const isCostOpt = sc.scenario_type.includes('Cost');
+                  const isEnterprise = sc.scenario_type.includes('High') || sc.scenario_type.includes('Enterprise');
+
+                  let themeColor = '#2563eb';
+                  let badgeText = 'Recomendado';
+                  if (isCostOpt) {
+                    themeColor = '#10b981';
+                    badgeText = 'Económico';
+                  } else if (isEnterprise) {
+                    themeColor = '#8b5cf6';
+                    badgeText = 'Misión Crítica';
+                  }
 
                   return (
-                    <label
-                      key={rec.serviceId}
+                    <div
+                      key={sc.scenario_type}
+                      onClick={() => setSelectedScenarioIndex(idx)}
                       style={{
-                        display: 'flex',
-                        alignItems: 'flex-start',
-                        gap: 12,
-                        padding: '10px 14px',
-                        borderRadius: 10,
-                        border: isChecked ? '1px solid #bfdbfe' : '1px solid #e2e8f0',
-                        background: isChecked ? '#f8fafc' : '#ffffff',
+                        background: isSelected ? '#ffffff' : '#f8fafc',
+                        border: isSelected ? `2px solid ${themeColor}` : '1px solid #e2e8f0',
+                        borderRadius: 14,
+                        padding: 16,
                         cursor: 'pointer',
                         transition: 'all 0.15s ease',
+                        boxShadow: isSelected ? `0 4px 14px ${themeColor}20` : 'none',
+                        position: 'relative',
                       }}
                     >
-                      <input
-                        type="checkbox"
-                        checked={isChecked}
-                        onChange={() => handleToggleService(catalogSvc.codeName)}
-                        style={{ marginTop: 3, cursor: 'pointer', accentColor: '#2563eb' }}
-                      />
-                      <div style={{ flex: 1 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6 }}>
-                          <span style={{ fontSize: 13.5, fontWeight: 700, color: '#1e293b' }}>
-                            {catalogSvc.name} ({catalogSvc.codeName})
-                          </span>
-                          <span style={{ fontSize: 12, fontWeight: 600, color: '#2563eb', background: '#eff6ff', padding: '2px 8px', borderRadius: 6 }}>
-                            {catalogSvc.pricing.unitLabel}
-                          </span>
-                        </div>
-                        <p style={{ fontSize: 12.5, color: '#475569', margin: '3px 0 0' }}>
-                          {rec.reason}
-                        </p>
-                        <span style={{ fontSize: 11, color: '#94a3b8', marginTop: 2, display: 'block' }}>
-                          Disparado por: {rec.triggeredBy.join(', ')}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                        <span
+                          style={{
+                            fontSize: 10.5,
+                            fontWeight: 700,
+                            padding: '2px 8px',
+                            borderRadius: 12,
+                            background: `${themeColor}15`,
+                            color: themeColor,
+                          }}
+                        >
+                          {badgeText}
                         </span>
+                        {isSelected && <Check size={16} color={themeColor} strokeWidth={3} />}
                       </div>
-                    </label>
+
+                      <h5 style={{ margin: '0 0 6px', fontSize: 13.5, fontWeight: 700, color: '#0f172a' }}>
+                        {sc.scenario_type.replace(/-/g, ' ')}
+                      </h5>
+
+                      <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, margin: '6px 0' }}>
+                        <span style={{ fontSize: 20, fontWeight: 800, color: themeColor }}>
+                          ${sc.pricing.monthly_total_usd.toFixed(2)}
+                        </span>
+                        <span style={{ fontSize: 11.5, color: '#64748b' }}>USD / mes</span>
+                      </div>
+
+                      <p style={{ margin: 0, fontSize: 11, color: '#64748b', lineHeight: 1.4 }}>
+                        ${sc.pricing.annual_total_usd.toLocaleString()} USD / año · {sc.services.length} servicios
+                      </p>
+                    </div>
                   );
                 })}
               </div>
-            </div>
-          )}
 
-          {/* 4. No disponibles en este simulador */}
-          {analysisResult.unsupported.length > 0 && (
-            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 12, padding: 14 }}>
-              <h5 style={{ fontSize: 12, fontWeight: 700, color: '#64748b', margin: '0 0 6px', textTransform: 'uppercase' }}>
-                No disponibles en este simulador
-              </h5>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                {analysisResult.unsupported.map((uns) => (
-                  <div key={uns.name} style={{ fontSize: 12, color: '#64748b' }}>
-                    <strong style={{ color: '#475569' }}>{uns.name}:</strong> sugerido en AWS:{' '}
-                    <span style={{ color: '#1e293b', fontWeight: 600 }}>{uns.suggestedAwsService}</span>. {uns.note}
+              {/* Detalle del Escenario Seleccionado */}
+              {activeScenario && (
+                <div
+                  style={{
+                    background: '#f8fafc',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: 14,
+                    padding: 18,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 14,
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+                    <div>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>
+                        Detalle del Escenario
+                      </span>
+                      <p style={{ margin: '2px 0 0', fontSize: 12.5, color: '#334155', fontWeight: 500 }}>
+                        {activeScenario.summary}
+                      </p>
+                    </div>
                   </div>
-                ))}
+
+                  {/* Tabla / Lista de Servicios Dimensionados */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: '#1e293b' }}>
+                      Servicios AWS Aprovisionados ({activeScenario.services.length}):
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 320, overflowY: 'auto' }}>
+                      {activeScenario.services.map((svc, i) => {
+                        const code = svc.service_code || svc.service_name.split(' ')[0];
+                        const isChecked = selectedServiceCodes.has(code);
+
+                        return (
+                          <div
+                            key={i}
+                            style={{
+                              background: '#ffffff',
+                              border: '1px solid #e2e8f0',
+                              borderRadius: 10,
+                              padding: '10px 14px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              gap: 12,
+                            }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1 }}>
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={() => handleToggleService(code)}
+                                style={{ width: 16, height: 16, accentColor: '#2563eb', cursor: 'pointer' }}
+                              />
+                              <div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                  <strong style={{ fontSize: 13, color: '#0f172a' }}>{svc.service_name}</strong>
+                                  <span
+                                    style={{
+                                      fontSize: 10,
+                                      fontWeight: 600,
+                                      background: '#f1f5f9',
+                                      color: '#475569',
+                                      padding: '1px 6px',
+                                      borderRadius: 6,
+                                    }}
+                                  >
+                                    {svc.category}
+                                  </span>
+                                </div>
+                                <p style={{ margin: '2px 0 0', fontSize: 11.5, color: '#64748b' }}>
+                                  {svc.role} · <span style={{ color: '#0f172a', fontWeight: 500 }}>{svc.specs}</span>
+                                </p>
+                              </div>
+                            </div>
+
+                            <div style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                              <span style={{ fontSize: 13.5, fontWeight: 700, color: '#0f172a' }}>
+                                ${(svc.total_monthly_usd || svc.estimated_unit_cost_usd * svc.quantity).toFixed(2)}
+                              </span>
+                              <span style={{ fontSize: 10.5, color: '#64748b', display: 'block' }}>
+                                ({svc.quantity}x @ ${svc.estimated_unit_cost_usd.toFixed(2)}/mes)
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Observaciones del Well-Architected Framework */}
+          {analysisResult.enterpriseEvaluation?.well_architected_notes &&
+            analysisResult.enterpriseEvaluation.well_architected_notes.length > 0 && (
+              <div
+                style={{
+                  background: '#f0fdf4',
+                  border: '1px solid #bbf7d0',
+                  borderRadius: 12,
+                  padding: 16,
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                  <Shield size={16} color="#16a34a" />
+                  <strong style={{ fontSize: 13, color: '#166534' }}>
+                    Buenas Prácticas AWS Well-Architected Framework
+                  </strong>
+                </div>
+                <ul style={{ margin: 0, paddingLeft: 18, fontSize: 12, color: '#14532d', lineHeight: 1.5 }}>
+                  {analysisResult.enterpriseEvaluation.well_architected_notes.map((note, idx) => (
+                    <li key={idx} style={{ marginBottom: 4 }}>
+                      {note}
+                    </li>
+                  ))}
+                </ul>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* 5. Advertencias si existen */}
-          {analysisResult.warnings.length > 0 && (
-            <div style={{ background: '#fffbeb', border: '1px solid #fef3c7', borderRadius: 10, padding: 12 }}>
-              {analysisResult.warnings.map((w) => (
-                <p key={w} style={{ fontSize: 12.5, color: '#92400e', margin: 0 }}>
-                  ⚠️ {w}
-                </p>
-              ))}
+          {/* BOTONES DE ACCIÓN FINAL */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              paddingTop: 12,
+              borderTop: '1px solid #e2e8f0',
+              flexWrap: 'wrap',
+              gap: 12,
+            }}
+          >
+            <div style={{ fontSize: 12, color: '#64748b' }}>
+              Servicios seleccionados para registrar:{' '}
+              <strong style={{ color: '#0f172a' }}>{selectedServiceCodes.size} servicios</strong>
             </div>
-          )}
 
-          {/* 6. Botones de Acción */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 12, marginTop: 4 }}>
-            <button
-              type="button"
-              onClick={handleDiscard}
-              style={{
-                padding: '9px 18px',
-                borderRadius: 8,
-                fontSize: 13,
-                fontWeight: 600,
-                border: '1px solid #cbd5e1',
-                background: '#ffffff',
-                color: '#64748b',
-                cursor: 'pointer',
-              }}
-            >
-              Descartar
-            </button>
-            <button
-              type="button"
-              onClick={handleApply}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 8,
-                padding: '9px 20px',
-                borderRadius: 8,
-                fontSize: 13,
-                fontWeight: 600,
-                border: 'none',
-                background: '#2563eb',
-                color: '#ffffff',
-                cursor: 'pointer',
-                boxShadow: '0 2px 4px rgba(37,99,235,0.25)',
-              }}
-            >
-              <Check size={16} />
-              Usar en mi propuesta
-              <ArrowRight size={14} />
-            </button>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                type="button"
+                onClick={handleDiscard}
+                style={{
+                  background: '#f1f5f9',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: 10,
+                  padding: '9px 16px',
+                  fontSize: 12.5,
+                  fontWeight: 600,
+                  color: '#475569',
+                  cursor: 'pointer',
+                }}
+              >
+                Descartar
+              </button>
+
+              <button
+                type="button"
+                onClick={handleApply}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  background: '#2563eb',
+                  border: 'none',
+                  borderRadius: 10,
+                  padding: '10px 22px',
+                  fontSize: 13,
+                  fontWeight: 700,
+                  color: '#ffffff',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(37, 99, 235, 0.25)',
+                }}
+              >
+                <span>Aplicar este Escenario a la Propuesta y Presupuesto</span>
+                <ArrowRight size={15} />
+              </button>
+            </div>
           </div>
         </div>
       )}
