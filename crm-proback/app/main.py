@@ -9,6 +9,9 @@ from app.api.v1 import auth, users, workspaces, datasets, analytics
 from app.models.user import User, UserWorkspace
 from app.models.workspace import Workspace
 from app.core.security import get_password_hash
+from app.api.v1.migration_routes import router as multi_origin_router
+
+
 
 # Note: In production, migrations with Alembic should be used instead of Base.metadata.create_all
 # Base.metadata.create_all(bind=engine)
@@ -87,6 +90,7 @@ app.include_router(users.router, prefix="/api/v1/users", tags=["users"])
 app.include_router(workspaces.router, prefix="/api/v1/workspaces", tags=["workspaces"])
 app.include_router(datasets.router, prefix="/api/v1/datasets", tags=["datasets"])
 app.include_router(analytics.router, prefix="/api/v1/analytics", tags=["analytics"])
+app.include_router(multi_origin_router, prefix="/api/v1")
 
 @app.get("/")
 def read_root():

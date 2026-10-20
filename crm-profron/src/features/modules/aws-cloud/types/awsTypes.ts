@@ -162,4 +162,59 @@ export interface AnalysisResult {
   suggestedAppType: string;
   suggestedDescription: string;
   warnings: string[];
+  enterpriseEvaluation?: EnterpriseEvaluationResponse;
+}
+
+// ==========================================
+// Tipos para Evaluación Empresarial Cloud (Backend + REA)
+// ==========================================
+
+export interface BackendAwsServiceItem {
+  service_name: string;
+  service_code?: string;
+  category: string;
+  role: string;
+  specs: string;
+  quantity: number;
+  estimated_unit_cost_usd: number;
+  total_monthly_usd: number;
+  reason: string;
+}
+
+export interface ScenarioPricing {
+  monthly_total_usd: number;
+  annual_total_usd: number;
+  currency: string;
+}
+
+export interface ArchitectureScenario {
+  scenario_type: 'Cost-Optimized' | 'Recommended-Production' | 'High-Availability-Enterprise' | string;
+  summary: string;
+  services: BackendAwsServiceItem[];
+  pricing: ScenarioPricing;
+}
+
+export interface EnterpriseEvaluationResponse {
+  status: 'success' | 'error';
+  origin_detected: string;
+  detected_configs: string[];
+  system_analysis: string;
+  architecture_pattern: string;
+  migration_strategy: string;
+  well_architected_notes: string[];
+  scenarios: ArchitectureScenario[];
+  technical_evidence?: {
+    languages?: string[];
+    frameworks?: string[];
+    databases?: string[];
+    has_docker?: boolean;
+    total_files?: number;
+  };
+}
+
+export interface EvaluationOptions {
+  traffic_tier?: 'low' | 'medium' | 'high' | 'enterprise';
+  target_region?: string;
+  custom_notes?: string;
+  github_token?: string;
 }

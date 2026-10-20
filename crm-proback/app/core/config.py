@@ -1,3 +1,4 @@
+from typing import Optional
 # pyrefly: ignore [missing-import]
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -12,6 +13,9 @@ class Settings(BaseSettings):
     SUPABASE_ANON_KEY: str
     SUPABASE_SERVICE_ROLE_KEY: str
     GEMINI_API_KEY: str
+    GEMINI_MODEL: Optional[str] = None
+    CLAUDE_API_KEY: Optional[str] = None
+    CLAUDE_MODEL: str = "claude-sonnet-5-5"
     CORS_ORIGINS: str = "http://localhost:5173"
 
     OTP_EXPIRATION_MINUTES: int = 3
